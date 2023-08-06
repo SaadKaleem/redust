@@ -24,11 +24,13 @@ Redust is a high-performance, open-source, in-memory database server inspired by
    git clone https://github.com/SaadKaleem/redust.git
    cd redust
    ```
-2. Build the project
+
+2. Build the project:
    ```sh
    cargo build
    ```
-3. Run the project
+   
+3. Run the project:
    ```sh
    cargo run
    ```
