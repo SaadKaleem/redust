@@ -1,15 +1,15 @@
 # 🦀 Redust
 
-[![Build Status](https://travis-ci.com/SaadKaleem/redust.svg?branch=master)](https://travis-ci.com/SaadKaleem/redust)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/SaadKaleem/redust/blob/master/LICENSE)
+[![Build Status](https://travis-ci.com/SaadKaleem/redust.svg?branch=main)](https://travis-ci.com/SaadKaleem/redust)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 Redust is a high-performance, open-source, in-memory database server inspired by Redis and built from the ground up in Rust.
 
 ## 🔑 Features
 
-- Asynchronous design using Rust's async/await syntax
+- Asynchronous design using Rust's async/await syntax.
 - Support for Redis-like data structures and commands.
-- Built-in thread safety and data integrity through Rust's ownership model
+- Built-in thread safety and data integrity through Rust's ownership model.
 
 ## 🛠️ Getting Started
 
@@ -29,7 +29,7 @@ Redust is a high-performance, open-source, in-memory database server inspired by
    ```sh
    cargo build
    ```
-   
+
 3. Run the project:
    ```sh
    cargo run
