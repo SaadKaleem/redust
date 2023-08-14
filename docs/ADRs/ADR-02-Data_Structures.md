@@ -2,7 +2,7 @@
 
 # Status
 
-**Pending** - Date of Decision: ...
+**Accepted** - Date of Decision: **14/08/2023**
 
 
 # Context  
@@ -22,10 +22,10 @@ We have decided to use the following data structures for building our basic comm
 
 **Strings**: To store text or binary data. This will be based on the traditional Rust [`std:string::String`](https://doc.rust-lang.org/std/string/struct.String.html) type, which is implemented as a collection of characters using the [`UTF-8`](https://en.wikipedia.org/wiki/UTF-8) encoding. Dynamic allocation on the heap, and managed by the Rust's core allocator. 
 
-**Lists**: To store contiguous sequence of elements. This will be based on [` std::collections::LinkedList`](https://doc.rust-lang.org/std/collections/struct.LinkedList.html) which has an underlying Doubly-linked list implementation, where each element stores two pointers (previous and next). Insertion and deletion operations at the beginning and end, are `O(1)` which is suffice for our `push` and `pop` commands. Inserting or deleting from the middle would not require shifting of the elements. 
+**Lists**: To store contiguous sequence of elements. This will be based on [`std::collections::LinkedList`](https://doc.rust-lang.org/std/collections/struct.LinkedList.html) which has an underlying Doubly-linked list implementation, where each element stores two pointers (previous and next). Insertion and deletion operations at the beginning and end, are `O(1)` which is suffice for our `push` and `pop` commands. Inserting or deleting from the middle would not require shifting of the elements. 
 
 
-**Hashes**: Maps of key value pairs. This will be based on [`  std::collections::HashMap`](https://doc.rust-lang.org/stable/std/collections/struct.HashMap.html) which is based on the Google's [`SwissTable`](https://abseil.io/blog/20180927-swisstables) implementation. It utilizes the [`SipHash`](https://en.wikipedia.org/wiki/SipHash) algorithm which produces at 64-bit hash value. To resolve collisions, [`Quadratic Probing`](https://en.wikipedia.org/wiki/Quadratic_probing) has also been utilized.
+**Hashes**: Maps of key value pairs. This will be based on [`std::collections::HashMap`](https://doc.rust-lang.org/stable/std/collections/struct.HashMap.html) which is based on the Google's [`SwissTable`](https://abseil.io/blog/20180927-swisstables) implementation. It utilizes the [`SipHash`](https://en.wikipedia.org/wiki/SipHash) algorithm which produces at 64-bit hash value. To resolve collisions, [`Quadratic Probing`](https://en.wikipedia.org/wiki/Quadratic_probing) has also been utilized.
 
 ---
 
