@@ -60,7 +60,7 @@ impl Command {
             cmd_strings.push(text);
         }
 
-        let cmd_name = cmd_strings.get(0).unwrap();
+        let cmd_name = cmd_strings.get(0).unwrap().to_lowercase();
 
         let cmd = match cmd_name.as_str() {
             "ping" => Command::Ping(Ping::parse(cmd_strings)?),
@@ -92,8 +92,7 @@ impl Command {
                     frame
                 )))
             }
-        }
-        .to_lowercase();
+        };
 
         Ok(text)
     }
