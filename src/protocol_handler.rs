@@ -63,7 +63,7 @@ trait BaseSerializer {
             .position(|window: &[u8]| window == b"\r\n");
 
         if let Some(crlf_pos) = separator {
-            // Convert the byte slice to a string slice
+            // Convert the byte slice to a string slice, skipping the initial symbol
             if let Ok(length_str) = std::str::from_utf8(&buffer[1..crlf_pos]) {
                 // Parse the length_str
                 if let Ok(length) = length_str.parse::<i32>() {
@@ -337,6 +337,6 @@ pub fn serialize_data(input_data: &RESPType) -> Option<Vec<u8>> {
         RESPType::Error(_) => ErrorSerializer.serialize(&input_data),
         RESPType::Integer(_) => IntegerSerializer.serialize(&input_data),
         RESPType::BulkString(_) => BulkStringSerializer.serialize(&input_data),
-        RESPType::Array(_) => ArraySerializer.serialize(&input_data)
+        RESPType::Array(_) => ArraySerializer.serialize(&input_data),
     }
 }
