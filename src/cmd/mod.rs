@@ -61,15 +61,16 @@ impl Command {
         }
 
         let cmd_name = cmd_strings.get(0).unwrap().to_lowercase();
-        
+
         println!("{:?}", cmd_name.as_str());
         let cmd = match cmd_name.as_str() {
             "ping" => Command::Ping(Ping::parse(cmd_strings)?),
             "echo" => Command::Echo(Echo::parse(cmd_strings)?),
             _ => {
+                println!("Unrecognized Command");
                 return Err(ParseError::UnrecognizedCmd(format!(
                     "ERR: Unrecognized Command"
-                )))
+                )));
             }
         };
 

@@ -56,23 +56,23 @@ impl ConnectionHandler {
     /// written back to the socket.
     async fn run(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         // Returns when a valid frame has been read.
-        let frame = self.connection.read_frame().await?.unwrap();
+        loop {
+            let frame = self.connection.read_frame().await?.unwrap();
 
-        // Convert the RespType into a command struct.
-        // This will return an error if the frame is not a valid command.
-        match Command::infer_command(frame) {
-            Ok(cmd) => {
-                // Execute the command
-                // The connection is passed into the execute function which allows the
-                // concrete command to write the response directly to the connection stream
-                let _ = cmd.execute(&mut self.connection).await;
-                Ok(())
-            }
-            Err(err) => {
-                let err = RESPType::Error(err.to_string());
-                let _ = self.connection.write_frame(&err).await;
-                Ok(())
-            }
+            // Convert the RespType into a command struct.
+            // This will return an error if the frame is not a valid command.
+            match Command::infer_command(frame) {
+                Ok(cmd) => {
+                    // Execute the command
+                    // The connection is passed into the execute function which allows the
+                    // concrete command to write the response directly to the connection stream
+                    let _ = cmd.execute(&mut self.connection).await;
+                }
+                Err(err) => {
+                    let err = RESPType::Error(err.to_string());
+                    let _ = self.connection.write_frame(&err).await;
+                }
+            };
         }
     }
 }
