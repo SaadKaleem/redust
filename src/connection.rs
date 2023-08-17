@@ -49,13 +49,14 @@ impl Connection {
             //
             // If the frame does not fit into the buffer, we will reallocate space anyway, to keep reading.
             println!("Buffer before reading: {:?}", self.buffer);
-            let (frame, _) = deserialize_buffer(&self.buffer.as_slice());
-            // If we got a valid frame, return it
+            let (frame, frame_size) = deserialize_buffer(&self.buffer.as_slice());
+            println!("Buffer after reading: {:?}", self.buffer);
+            // If we got a valid frame, return it and
+            // drain the buffer upto the frame_size
             if frame.is_some() {
+                self.buffer.drain(0..frame_size);
                 return Ok(frame);
             }
-
-            println!("Buffer after reading: {:?}", self.buffer);
 
             // Attempt to read more data from the socket
             //
