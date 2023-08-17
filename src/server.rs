@@ -1,4 +1,4 @@
-use crate::{cmd::Command, connection::Connection};
+use crate::{cmd::Command, connection::Connection, RESPType};
 use tokio::net::TcpListener;
 
 /// Server listener state. Created in the `run` call. It includes a `run` method
@@ -60,16 +60,20 @@ impl ConnectionHandler {
 
         // Convert the RespType into a command struct.
         // This will return an error if the frame is not a valid command.
-        let cmd = Command::infer_command(frame)?;
-
-        println!("{:?}", cmd);
-
-        // Execute the command
-        // The connection is passed into the execute function which allows the
-        // concrete command to write the response directly to the connection stream
-        let _ = cmd.execute(&mut self.connection).await;
-
-        Ok(())
+        match Command::infer_command(frame) {
+            Ok(cmd) => {
+                // Execute the command
+                // The connection is passed into the execute function which allows the
+                // concrete command to write the response directly to the connection stream
+                let _ = cmd.execute(&mut self.connection).await;
+                Ok(())
+            }
+            Err(err) => {
+                let err = RESPType::Error(err.to_string());
+                let _ = self.connection.write_frame(&err).await;
+                Ok(())
+            }
+        }
     }
 }
 

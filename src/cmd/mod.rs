@@ -61,7 +61,8 @@ impl Command {
         }
 
         let cmd_name = cmd_strings.get(0).unwrap().to_lowercase();
-
+        
+        println!("{:?}", cmd_name.as_str());
         let cmd = match cmd_name.as_str() {
             "ping" => Command::Ping(Ping::parse(cmd_strings)?),
             "echo" => Command::Echo(Echo::parse(cmd_strings)?),
@@ -73,13 +74,6 @@ impl Command {
         };
 
         Ok(cmd)
-    }
-
-    pub async fn execute(self, cnxn: &mut Connection) -> Result<(), Box<dyn std::error::Error>> {
-        match self {
-            Command::Ping(cmd) => cmd.execute(cnxn).await,
-            Command::Echo(cmd) => cmd.execute(cnxn).await,
-        }
     }
 
     pub fn extract_string(frame: RESPType) -> Result<String, ParseError> {
@@ -95,5 +89,12 @@ impl Command {
         };
 
         Ok(text)
+    }
+
+    pub async fn execute(self, cnxn: &mut Connection) -> Result<(), Box<dyn std::error::Error>> {
+        match self {
+            Command::Ping(cmd) => cmd.execute(cnxn).await,
+            Command::Echo(cmd) => cmd.execute(cnxn).await,
+        }
     }
 }

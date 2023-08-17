@@ -16,7 +16,7 @@ impl Echo {
         match cmd_strings.get(1) {
             Some(msg) => Ok(Echo::new(msg.into())),
             None => Err(ParseError::MissingCmdArg(
-                "ERR: Missing echo message".to_string(),
+                "ERR: Missing Argument".to_string(),
             )),
         }
     }
