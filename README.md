@@ -1,6 +1,6 @@
 # 🦀 Redust
 
-[![Build Status](https://github.com/SaadKaleem/redust/actions/workflows/redust.yml/badge.svg?branch=main)]
+[![Build Status](https://github.com/SaadKaleem/redust/actions/workflows/redust.yml/badge.svg?branch=main)](https://github.com/SaadKaleem/redust/actions)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 
