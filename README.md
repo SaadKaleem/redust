@@ -1,7 +1,9 @@
 # 🦀 Redust
 
-[![Build Status](https://travis-ci.com/SaadKaleem/redust.svg?branch=main)](https://travis-ci.com/SaadKaleem/redust)
+[![Build Status](https://github.com/SaadKaleem/redust/actions/workflows/redust.yml/badge.svg?branch=main)]
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+
+
 
 Redust is a high-performance, open-source, in-memory database server inspired by Redis and built from the ground up in Rust.
 
