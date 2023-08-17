@@ -18,10 +18,25 @@ fn test_ping(mut cnxn: Connection) -> RedisResult<()> {
 }
 
 #[rstest]
-fn test_redis_echo(mut cnxn: Connection) -> RedisResult<()> {
-    let message = "Hello, Redis!";
-    let echoed_message: String = redis::cmd("ECHO").arg(message).query(&mut cnxn)?;
+#[case("ECHO", Some("Hello, World!".to_string()))]
+// Missing Argument
+#[case("ECHO", None)]
+fn test_echo(
+    #[case] command: &str,
+    #[case] message: Option<String>,
+    mut cnxn: Connection,
+) -> RedisResult<()> {
 
-    assert_eq!(echoed_message, message);
+    let response: Result<String, redis::RedisError> =
+        redis::cmd(command).arg(&message).query(&mut cnxn);
+
+    match message {
+        Some(message) => assert_eq!(response.unwrap(), message),
+        None => assert_eq!(
+            response.err().unwrap().to_string(),
+            "ERR:: Missing Argument".to_string()
+        ),
+    }
+
     Ok(())
 }
