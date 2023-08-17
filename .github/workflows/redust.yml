@@ -1,4 +1,4 @@
-name: Rust
+name: Redust
 
 on:
   push:
@@ -22,4 +22,3 @@ jobs:
           cargo run --verbose & 
           sleep 3 &&
           cargo test --verbose
-
