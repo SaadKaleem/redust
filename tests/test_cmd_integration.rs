@@ -1,10 +1,11 @@
 use redis::{Client, Connection, RedisResult};
+use redust::{DEFAULT_HOST, DEFAULT_PORT};
 use rstest::fixture;
 use rstest::rstest;
 
 #[fixture]
 fn cnxn() -> Connection {
-    let client = Client::open("redis://127.0.0.1:6666/").unwrap();
+    let client = Client::open(format!("redis://{}:{}/", DEFAULT_HOST, DEFAULT_PORT)).unwrap();
     let cnxn = client.get_connection().unwrap();
     cnxn
 }
@@ -26,7 +27,6 @@ fn test_echo(
     #[case] message: Option<String>,
     mut cnxn: Connection,
 ) -> RedisResult<()> {
-
     let response: Result<String, redis::RedisError> =
         redis::cmd(command).arg(&message).query(&mut cnxn);
 
