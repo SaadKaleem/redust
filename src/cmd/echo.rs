@@ -13,17 +13,25 @@ impl Echo {
     }
 
     pub fn parse(cmd_strings: Vec<String>) -> Result<Echo, ParseError> {
-        match cmd_strings.get(1) {
-            Some(msg) => Ok(Echo::new(msg.into())),
-            None => Err(ParseError::MissingCmdArg(
-                "ERR: Missing Argument".to_string(),
-            )),
+        if cmd_strings.len() > 2 {
+            return Err(ParseError::ExtraCmdArg(
+                "ERR wrong number of arguments for 'echo' command".to_string(),
+            ));
+        } else {
+            match cmd_strings.get(1) {
+                Some(msg) => return Ok(Echo::new(msg.into())),
+                None => {
+                    return Err(ParseError::MissingCmdArg(
+                        "ERR wrong number of arguments for 'echo' command".to_string(),
+                    ))
+                }
+            }
         }
     }
 
     /// Execute the `Echo` command
     pub async fn execute(self, cnxn: &mut Connection) -> Result<(), Box<dyn std::error::Error>> {
-        let resp = RESPType::SimpleString(self.msg.to_string());
+        let resp = RESPType::SimpleString(format!("{}{}{}", "\"", self.msg, "\""));
 
         // Write the response back to the client
         cnxn.write_frame(&resp).await?;
