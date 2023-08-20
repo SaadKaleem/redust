@@ -46,6 +46,7 @@ fn test_ping(
 }
 
 #[rstest]
+// Single Argument
 #[case("ECHO", Some("Hello, World!".to_string()), None)]
 // Missing Argument
 #[case("ECHO", None, None)]
