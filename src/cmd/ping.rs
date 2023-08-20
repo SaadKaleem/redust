@@ -32,7 +32,7 @@ impl Ping {
         }
     }
 
-    /// Execute the "Ping" command and return PONG
+    /// Execute the "Ping" command and return PONG or the optional message if provided.
     pub async fn execute(self, cnxn: &mut Connection) -> Result<(), Box<dyn std::error::Error>> {
         let resp = match self.msg {
             Some(msg) => RESPType::SimpleString(format!("{}{}{}", "\"", msg, "\"")),
