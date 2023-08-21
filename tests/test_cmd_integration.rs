@@ -106,41 +106,41 @@ fn test_echo(
 // With NX
 #[case(
     "SET",
-    Some(String::from("John")),
-    Some(String::from("Doe")),
+    Some(String::from("William")),
+    Some(String::from("Bryce")),
     Some(String::from("NX")),
-    None,
-    None,
-    None,
-    Err(String::from("NX: condition not met"))
-)]
-// With XX
-#[case(
-    "SET",
-    Some(String::from("John")),
-    Some(String::from("Doe")),
-    Some(String::from("XX")),
     None,
     None,
     None,
     Ok(String::from("\"OK\""))
 )]
-// With XX and GET
+// With XX
 #[case(
     "SET",
-    Some(String::from("John")),
     Some(String::from("Crickett")),
+    Some(String::from("Test")),
     Some(String::from("XX")),
+    None,
+    None,
+    None,
+    Err(String::from("XX: condition not met"))
+)]
+// With NX and GET
+#[case(
+    "SET",
+    Some(String::from("Hello")),
+    Some(String::from("World")),
+    Some(String::from("NX")),
     Some(String::from("GET")),
     None,
     None,
-    Ok(String::from("\"Doe\""))
+    Ok(String::from("\"OK\""))
 )]
 // With NX and XX
 #[case(
     "SET",
-    Some(String::from("John")),
     Some(String::from("Doe")),
+    Some(String::from("Test")),
     Some(String::from("NX")),
     Some(String::from("XX")),
     None,
@@ -167,6 +167,7 @@ fn test_set(
         .arg(&sixth_arg)
         .query(&mut cnxn);
 
+    println!("{:?}", actual_response);
     // Compare the two Result values using assert_eq!
     match (expected_response, actual_response) {
         (Ok(expected), Ok(actual)) => {
