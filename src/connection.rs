@@ -48,9 +48,7 @@ impl Connection {
             // Therefore, we will keep reading more data.
             //
             // If the frame does not fit into the buffer, we will reallocate space anyway, to keep reading.
-            println!("Buffer before reading: {:?}", self.buffer);
             let (frame, frame_size) = deserialize_buffer(&self.buffer.as_slice());
-            println!("Buffer after reading: {:?}", self.buffer);
             // If we got a valid frame, return it and
             // drain the buffer upto the frame_size
             if frame.is_some() {
@@ -80,6 +78,7 @@ impl Connection {
     pub async fn write_frame(&mut self, frame: &RESPType) -> io::Result<()> {
         let data = serialize_data(&frame).unwrap();
 
+        // println!("{:?}", String::from_utf8(data.clone()));
         self.stream.write_all(&data).await?;
 
         // Make sure that any buffered contents are written.

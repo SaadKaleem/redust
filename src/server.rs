@@ -33,7 +33,6 @@ impl Listener {
         loop {
             // Accept a new socket. The `accept` method internally attempts to
             // recover errors, so if an error occurs here, we should propagate it
-            println!("Accepting Inbound Connections");
             let (socket, _) = self.listener.accept().await?;
 
             // Create the necessary per-connection handler

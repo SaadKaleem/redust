@@ -70,8 +70,8 @@ impl Command {
 
         let cmd_name = cmd_strings.get(0).unwrap();
 
-        println!("{:?}", cmd_name.as_str());
-        let cmd = match cmd_name.to_lowercase().as_str() {
+        // println!("{:?}", cmd_name.as_str());
+        let cmd: Command = match cmd_name.to_lowercase().as_str() {
             "ping" => Command::Ping(Ping::parse(cmd_strings)?),
             "echo" => Command::Echo(Echo::parse(cmd_strings)?),
             "set" => Command::Set(Set::parse(cmd_strings)?),

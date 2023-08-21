@@ -145,11 +145,9 @@ impl SharedStore {
 
         match mutex.data.get(key) {
             Some(value) => {
-                println!("Value ({:?}) found for key ({:?}) ", *value, key);
                 return Some(value.clone());
             }
             None => {
-                println!("Key {:?} not found", key);
                 return None;
             }
         }
