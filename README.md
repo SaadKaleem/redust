@@ -9,7 +9,7 @@ Redust is a high-performance, open-source, in-memory database server inspired by
 
 ## 🔑 Features
 
-- Asynchronous design using Rust's async/await syntax.
+- Asynchronous design using Rust's async/await via Tokio.
 - Support for Redis-like data structures and commands.
 - Built-in thread safety and data integrity through Rust's ownership model.
 
@@ -19,7 +19,7 @@ Redust is a high-performance, open-source, in-memory database server inspired by
 
 - Rust (version 1.70.0 or higher) - [Install Rust](https://www.rust-lang.org/tools/install)
 
-### Installation
+### 🚀 Installation
 
 1. Clone this repository:
    ```sh
@@ -37,9 +37,7 @@ Redust is a high-performance, open-source, in-memory database server inspired by
    cargo run
    ```
 
-## 🚀 Running the Project
-
-1. Please run the following to run the tests, in /tests dir:
+4. To run the tests, in /tests dir:
    ```sh
    cargo test
    ```
