@@ -12,6 +12,10 @@ impl Ping {
         Ping { msg }
     }
 
+    /// Parsing the necessary arguments for the `Ping` command
+    ///
+    /// Syntax:
+    /// PING [message]
     pub fn parse(cmd_strings: Vec<String>) -> Result<Ping, ParseError> {
         if cmd_strings.len() > 2 {
             return Err(ParseError::SyntaxError(

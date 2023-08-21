@@ -12,6 +12,10 @@ impl Echo {
         Echo { msg }
     }
 
+    /// Parsing the necessary arguments for the `Echo` command
+    ///
+    /// Syntax:
+    /// ECHO message
     pub fn parse(cmd_strings: Vec<String>) -> Result<Echo, ParseError> {
         if cmd_strings.len() > 2 {
             return Err(ParseError::SyntaxError(
