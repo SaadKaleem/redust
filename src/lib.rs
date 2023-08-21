@@ -1,6 +1,9 @@
 pub mod cmd;
 pub mod connection;
+pub mod data_store;
 pub use connection::Connection;
+pub use data_store::DataType;
+pub use data_store::SharedStore;
 pub mod protocol_handler;
 pub use protocol_handler::deserialize_buffer;
 pub use protocol_handler::serialize_data;
