@@ -73,8 +73,6 @@ impl SharedStore {
     ///
     /// Values are overrided, if the key already exists
     ///
-    /// if 'get' flag is provided, returns the old string value or `None`
-    /// if the key did not exist
     pub fn set(
         &self,
         key: String,
@@ -82,7 +80,6 @@ impl SharedStore {
         duration: Option<Duration>,
         nx: bool,
         xx: bool,
-        get: bool,
     ) -> Result<Option<DataType>, ParseError> {
         // Acquire the Mutex
         let mut mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
@@ -132,11 +129,7 @@ impl SharedStore {
         // Release the mutex
         drop(mutex);
 
-        if get {
-            return Ok(old_value);
-        } else {
-            return Ok(None);
-        };
+        return Ok(old_value);
     }
 
     /// Get the value associated with a Key
