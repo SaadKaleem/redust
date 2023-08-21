@@ -96,7 +96,7 @@ impl Set {
     ) -> Result<(), Box<dyn std::error::Error>> {
         // Set the key:value in the shared store
         let result: Result<Option<DataType>, ParseError> =
-            shared_store.set(&self.key, &self.value, &self.duration, &self.nx, &self.xx);
+            shared_store.set(self.key, self.value, self.duration, self.nx, self.xx);
 
         let response: RESPType = match result {
             // Success: old_value for this `key` existed

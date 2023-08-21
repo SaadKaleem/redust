@@ -40,7 +40,7 @@ impl Get {
         cnxn: &mut Connection,
     ) -> Result<(), Box<dyn std::error::Error>> {
         // Get the key in the shared store
-        let result: Option<DataType> = shared_store.get(&self.key);
+        let result: Option<DataType> = shared_store.get(self.key);
 
         let response: RESPType = match result {
             // Return a bulk string if there is a result of type String

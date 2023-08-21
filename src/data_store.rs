@@ -75,11 +75,11 @@ impl SharedStore {
     ///
     pub fn set(
         &self,
-        key: &String,
-        value: &DataType,
-        duration: &Option<Duration>,
-        nx: &bool,
-        xx: &bool,
+        key: String,
+        value: DataType,
+        duration: Option<Duration>,
+        nx: bool,
+        xx: bool,
     ) -> Result<Option<DataType>, ParseError> {
         // Acquire the Mutex
         let mut mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
@@ -87,18 +87,18 @@ impl SharedStore {
         // To check for xx and nx flags
         //
         // The corresponding `ParseError` is returned
-        if *nx == true && *xx == true {
+        if nx == true && xx == true {
             return Err(ParseError::SyntaxError("syntax error".to_string()));
-        } else if *nx == true && *xx == false {
+        } else if nx == true && xx == false {
             // Ensure that the key does not exist first
-            if mutex.data.contains_key(key) {
+            if mutex.data.contains_key(&key) {
                 return Err(ParseError::ConditionNotMet(
                     "NX condition not met".to_string(),
                 ));
             }
-        } else if *nx == false && *xx == true {
+        } else if nx == false && xx == true {
             // Ensure that the key already exists first
-            if !mutex.data.contains_key(key) {
+            if !mutex.data.contains_key(&key) {
                 return Err(ParseError::ConditionNotMet(
                     "XX condition not met".to_string(),
                 ));
@@ -116,7 +116,7 @@ impl SharedStore {
         // If it did, remove this key
         if old_value.is_some() {
             // Attempt to remove the key from the `date_time`, if there was any.
-            let _ = mutex.date_time.remove(key);
+            let _ = mutex.date_time.remove(&key);
         }
 
         // If an expiry duration is provided, we add it to the `date_time` map
@@ -135,15 +135,14 @@ impl SharedStore {
     /// Get the value associated with a Key
     ///
     /// Will return `None` if no value is found for the corresponding key.
-    pub fn get(&self, key: &String) -> Option<DataType> {
+    pub fn get(&self, key: String) -> Option<DataType> {
         // Acquire the Mutex
         let mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
 
         // TODO: If the value is expired, we return `None`
 
         // If the value exists, and is not expired we return `DataType`
-
-        match mutex.data.get(key) {
+        match mutex.data.get(&key) {
             Some(value) => {
                 return Some(value.clone());
             }
