@@ -14,7 +14,7 @@ impl Ping {
 
     pub fn parse(cmd_strings: Vec<String>) -> Result<Ping, ParseError> {
         if cmd_strings.len() > 2 {
-            return Err(ParseError::ExtraCmdArg(
+            return Err(ParseError::SyntaxError(
                 "wrong number of arguments for 'ping' command".to_string(),
             ));
         } else {

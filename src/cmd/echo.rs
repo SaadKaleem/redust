@@ -14,14 +14,14 @@ impl Echo {
 
     pub fn parse(cmd_strings: Vec<String>) -> Result<Echo, ParseError> {
         if cmd_strings.len() > 2 {
-            return Err(ParseError::ExtraCmdArg(
+            return Err(ParseError::SyntaxError(
                 "ERR wrong number of arguments for 'echo' command".to_string(),
             ));
         } else {
             match cmd_strings.get(1) {
                 Some(msg) => return Ok(Echo::new(msg.into())),
                 None => {
-                    return Err(ParseError::MissingCmdArg(
+                    return Err(ParseError::SyntaxError(
                         "ERR wrong number of arguments for 'echo' command".to_string(),
                     ))
                 }
