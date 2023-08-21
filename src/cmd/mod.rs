@@ -7,6 +7,9 @@ pub use echo::Echo;
 mod set;
 pub use set::Set;
 
+mod get;
+pub use get::Get;
+
 use crate::{Connection, RESPType, SharedStore};
 use std::fmt;
 
@@ -17,6 +20,7 @@ pub enum Command {
     Ping(Ping),
     Echo(Echo),
     Set(Set),
+    Get(Get),
 }
 
 #[derive(Debug)]
@@ -71,6 +75,7 @@ impl Command {
             "ping" => Command::Ping(Ping::parse(cmd_strings)?),
             "echo" => Command::Echo(Echo::parse(cmd_strings)?),
             "set" => Command::Set(Set::parse(cmd_strings)?),
+            "get" => Command::Get(Get::parse(cmd_strings)?),
             _ => {
                 return Err(ParseError::UnrecognizedCmd(format!(
                     "unknown command '{}'",
@@ -106,6 +111,7 @@ impl Command {
             Command::Ping(cmd) => cmd.execute(cnxn).await,
             Command::Echo(cmd) => cmd.execute(cnxn).await,
             Command::Set(cmd) => cmd.execute(shared_store, cnxn).await,
+            Command::Get(cmd) => cmd.execute(shared_store, cnxn).await,
         }
     }
 }

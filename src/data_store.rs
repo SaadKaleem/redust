@@ -135,7 +135,7 @@ impl SharedStore {
     /// Get the value associated with a Key
     ///
     /// Will return `None` if no value is found for the corresponding key.
-    pub fn get(&self, key: String) -> Option<DataType> {
+    pub fn get(&self, key: &String) -> Option<DataType> {
         // Acquire the Mutex
         let mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
 
@@ -143,10 +143,9 @@ impl SharedStore {
 
         // If the value exists, and is not expired we return `DataType`
 
-        match mutex.data.get(&key) {
+        match mutex.data.get(key) {
             Some(value) => {
                 println!("Value ({:?}) found for key ({:?}) ", *value, key);
-
                 return Some(value.clone());
             }
             None => {
