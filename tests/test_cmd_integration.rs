@@ -77,3 +77,108 @@ fn test_echo(
 
     Ok(())
 }
+
+#[rstest]
+// Missing Key Argument
+#[case("SET", None, None, None, None, None, None, Err(String::from("An error was signalled by the server - ResponseError: wrong number of arguments for 'set' command")))]
+// Missing Value Argument
+#[case(
+    "SET",
+    Some(String::from("John")),
+    None,
+    None,
+    None,
+    None,
+    None,
+    Err(String::from("An error was signalled by the server - ResponseError: wrong number of arguments for 'set' command"))
+)]
+// Two Arguments (Key & Value)
+#[case(
+    "SET",
+    Some(String::from("John")),
+    Some(String::from("Doe")),
+    None,
+    None,
+    None,
+    None,
+    Ok(String::from("\"OK\""))
+)]
+// With NX
+#[case(
+    "SET",
+    Some(String::from("John")),
+    Some(String::from("Doe")),
+    Some(String::from("NX")),
+    None,
+    None,
+    None,
+    Err(String::from("NX: condition not met"))
+)]
+// With XX
+#[case(
+    "SET",
+    Some(String::from("John")),
+    Some(String::from("Doe")),
+    Some(String::from("XX")),
+    None,
+    None,
+    None,
+    Ok(String::from("\"OK\""))
+)]
+// With XX and GET
+#[case(
+    "SET",
+    Some(String::from("John")),
+    Some(String::from("Crickett")),
+    Some(String::from("XX")),
+    Some(String::from("GET")),
+    None,
+    None,
+    Ok(String::from("\"Doe\""))
+)]
+// With NX and XX
+#[case(
+    "SET",
+    Some(String::from("John")),
+    Some(String::from("Doe")),
+    Some(String::from("NX")),
+    Some(String::from("XX")),
+    None,
+    None,
+    Err(String::from("NX/XX: syntax error"))
+)]
+fn test_set(
+    #[case] command: &str,
+    #[case] first_arg: Option<String>,
+    #[case] second_arg: Option<String>,
+    #[case] third_arg: Option<String>,
+    #[case] fourth_arg: Option<String>,
+    #[case] fifth_arg: Option<String>,
+    #[case] sixth_arg: Option<String>,
+    #[case] expected_response: Result<String, String>,
+    mut cnxn: Connection,
+) -> RedisResult<()> {
+    let actual_response: Result<String, redis::RedisError> = redis::cmd(command)
+        .arg(&first_arg)
+        .arg(&second_arg)
+        .arg(&third_arg)
+        .arg(&fourth_arg)
+        .arg(&fifth_arg)
+        .arg(&sixth_arg)
+        .query(&mut cnxn);
+
+    // Compare the two Result values using assert_eq!
+    match (expected_response, actual_response) {
+        (Ok(expected), Ok(actual)) => {
+            assert_eq!(expected, actual);
+        }
+        (Err(expected_err), Err(actual_err)) => {
+            assert_eq!(expected_err, actual_err.to_string());
+        }
+        _ => {
+            panic!("Expected and actual responses do not match.");
+        }
+    }
+
+    Ok(())
+}
