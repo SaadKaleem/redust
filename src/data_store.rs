@@ -75,11 +75,11 @@ impl SharedStore {
     ///
     pub fn set(
         &self,
-        key: String,
-        value: DataType,
-        duration: Option<Duration>,
-        nx: bool,
-        xx: bool,
+        key: &String,
+        value: &DataType,
+        duration: &Option<Duration>,
+        nx: &bool,
+        xx: &bool,
     ) -> Result<Option<DataType>, ParseError> {
         // Acquire the Mutex
         let mut mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
@@ -87,18 +87,18 @@ impl SharedStore {
         // To check for xx and nx flags
         //
         // The corresponding `ParseError` is returned
-        if nx == true && xx == true {
+        if *nx == true && *xx == true {
             return Err(ParseError::SyntaxError("syntax error".to_string()));
-        } else if nx == true && xx == false {
+        } else if *nx == true && *xx == false {
             // Ensure that the key does not exist first
-            if mutex.data.contains_key(&key) {
+            if mutex.data.contains_key(key) {
                 return Err(ParseError::ConditionNotMet(
                     "NX condition not met".to_string(),
                 ));
             }
-        } else if nx == false && xx == true {
+        } else if *nx == false && *xx == true {
             // Ensure that the key already exists first
-            if !mutex.data.contains_key(&key) {
+            if !mutex.data.contains_key(key) {
                 return Err(ParseError::ConditionNotMet(
                     "XX condition not met".to_string(),
                 ));
@@ -109,14 +109,14 @@ impl SharedStore {
         // If an old `value` existed for this `key`, it is returned.
         // We clone the key, as to not "move" its ownership, since we need its reference
         // for the expiry tasks later.
-        let old_value: Option<DataType> = mutex.data.insert(key.clone(), value);
+        let old_value: Option<DataType> = mutex.data.insert(key.clone(), value.clone());
 
         // Replace or delete the date_time entry.
         // If the `old_value` existed, then check if the corresponding key had an `expiration` time
         // If it did, remove this key
         if old_value.is_some() {
             // Attempt to remove the key from the `date_time`, if there was any.
-            let _ = mutex.date_time.remove(&key);
+            let _ = mutex.date_time.remove(key);
         }
 
         // If an expiry duration is provided, we add it to the `date_time` map
@@ -139,7 +139,7 @@ impl SharedStore {
         // Acquire the Mutex
         let mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
 
-        // If the value is expired, we return `None`
+        // TODO: If the value is expired, we return `None`
 
         // If the value exists, and is not expired we return `DataType`
 

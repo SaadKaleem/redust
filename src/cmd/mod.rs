@@ -4,7 +4,10 @@ pub use ping::Ping;
 mod echo;
 pub use echo::Echo;
 
-use crate::{Connection, RESPType};
+mod set;
+pub use set::Set;
+
+use crate::{Connection, RESPType, SharedStore};
 use std::fmt;
 
 /// Methods called on `Command` are delegated to the command implementation.
@@ -13,6 +16,7 @@ use std::fmt;
 pub enum Command {
     Ping(Ping),
     Echo(Echo),
+    Set(Set),
 }
 
 #[derive(Debug)]
@@ -66,6 +70,7 @@ impl Command {
         let cmd = match cmd_name.to_lowercase().as_str() {
             "ping" => Command::Ping(Ping::parse(cmd_strings)?),
             "echo" => Command::Echo(Echo::parse(cmd_strings)?),
+            "set" => Command::Set(Set::parse(cmd_strings)?),
             _ => {
                 return Err(ParseError::UnrecognizedCmd(format!(
                     "unknown command '{}'",
@@ -94,11 +99,13 @@ impl Command {
 
     pub async fn execute(
         self,
+        shared_store: &SharedStore,
         cnxn: &mut Connection,
     ) -> Result<(), Box<dyn std::error::Error>> {
         match self {
             Command::Ping(cmd) => cmd.execute(cnxn).await,
             Command::Echo(cmd) => cmd.execute(cnxn).await,
+            Command::Set(cmd) => cmd.execute(shared_store, cnxn).await,
         }
     }
 }
