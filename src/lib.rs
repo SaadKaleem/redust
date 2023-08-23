@@ -2,6 +2,8 @@ pub mod cmd;
 pub mod connection;
 pub mod data_store;
 pub use connection::Connection;
+pub use connection::ConnectionBase;
+pub use connection::MockConnectionBase;
 pub use data_store::DataType;
 pub use data_store::SharedStore;
 pub mod protocol_handler;
