@@ -1,10 +1,24 @@
+use crate::cmd::ParseError;
 use chrono::{DateTime, Duration, Utc};
+use mockall::automock;
 use std::{
     collections::{HashMap, LinkedList},
     sync::{Arc, Mutex},
 };
 
-use crate::cmd::ParseError;
+#[automock]
+pub trait SharedStoreBase: Send + Sync {
+    fn set(
+        &self,
+        key: String,
+        value: DataType,
+        duration: Option<Duration>,
+        nx: bool,
+        xx: bool,
+    ) -> Result<Option<DataType>, ParseError>;
+
+    fn get(&self, key: String) -> Option<DataType>;
+}
 
 /// Shared Data Store across all the connections
 ///
@@ -46,7 +60,7 @@ pub struct DataStore {
 }
 
 /// The supported data types which can be stored in the `DataStore`
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum DataType {
     String(String),
     LinkedList(LinkedList<String>),
@@ -67,13 +81,15 @@ impl SharedStore {
         });
         SharedStore { shared }
     }
+}
 
+impl SharedStoreBase for SharedStore {
     /// Set the `value` associated with the `key`, and an expiration
     /// duration, if provided
     ///
     /// Values are overrided, if the key already exists
     ///
-    pub fn set(
+    fn set(
         &self,
         key: String,
         value: DataType,
@@ -135,7 +151,7 @@ impl SharedStore {
     /// Get the value associated with a Key
     ///
     /// Will return `None` if no value is found for the corresponding key.
-    pub fn get(&self, key: String) -> Option<DataType> {
+    fn get(&self, key: String) -> Option<DataType> {
         // Acquire the Mutex
         let mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
 
