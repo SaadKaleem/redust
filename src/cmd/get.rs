@@ -1,6 +1,6 @@
 use crate::cmd::ParseError;
 use crate::protocol_handler::BulkStringData;
-use crate::{ConnectionBase, DataType, RESPType, SharedStore};
+use crate::{ConnectionBase, DataType, RESPType, SharedStoreBase};
 
 /// The classic GET operation in Redis
 #[derive(Debug)]
@@ -36,7 +36,7 @@ impl Get {
     /// Get the value of key. If the key does not exist then `None` is returned
     pub async fn execute(
         self,
-        shared_store: &SharedStore,
+        shared_store: &dyn SharedStoreBase,
         cnxn: &mut dyn ConnectionBase,
     ) -> Result<(), Box<dyn std::error::Error>> {
         // Get the key in the shared store

@@ -2,7 +2,7 @@ use chrono::Duration;
 
 use crate::cmd::ParseError;
 use crate::protocol_handler::BulkStringData;
-use crate::{ConnectionBase, DataType, RESPType, SharedStore};
+use crate::{ConnectionBase, DataType, RESPType, SharedStoreBase};
 
 /// The classic SET operation in Redis
 #[derive(Debug)]
@@ -93,7 +93,7 @@ impl Set {
     /// if the key did not exist
     pub async fn execute(
         self,
-        shared_store: &SharedStore,
+        shared_store: &dyn SharedStoreBase,
         cnxn: &mut dyn ConnectionBase,
     ) -> Result<(), Box<dyn std::error::Error>> {
         // Set the key:value in the shared store
@@ -104,10 +104,10 @@ impl Set {
             // Success: old_value for this `key` existed
             Ok(Some(value)) => match value {
                 DataType::String(s) => {
-                    let text = "\"".to_string() + &s.clone() + &"\"".to_string();
-                    let prefix_length = text.len();
-
                     if self.get == true {
+                        let text = "\"".to_string() + &s.clone() + &"\"".to_string();
+                        let prefix_length = text.len();
+
                         RESPType::BulkString(Some(BulkStringData {
                             text,
                             prefix_length,
