@@ -1,11 +1,14 @@
 use mockall::predicate::{eq, ne};
 use predicates::ord::EqPredicate;
-use redust::MockConnectionBase;
-use redust::{cmd::Echo, cmd::Ping, RESPType};
+use redust::protocol_handler::BulkStringData;
+use redust::DataType;
+use redust::{cmd::Echo, cmd::Ping, cmd::Set, RESPType};
+use redust::{MockConnectionBase, MockSharedStoreBase};
 use rstest::rstest;
 
 /// Ping Execute Command
-/// Assumption: Good Connection
+/// Assumption:
+/// 1. Good Connection
 #[rstest]
 // Equal to
 #[case(None, eq(RESPType::SimpleString("\"PONG\"".to_string())))]
@@ -27,7 +30,7 @@ async fn test_ping_execute_cnxn_ok(
         .expect_write_frame()
         .with(expected_input_cnxn_write_frame)
         .times(1)
-        .returning(|_x| Ok(()));
+        .returning(|_| Ok(()));
 
     // Call the function to test
     let result = ping_cmd.execute(&mut mock_cnxn).await;
@@ -35,7 +38,8 @@ async fn test_ping_execute_cnxn_ok(
 }
 
 /// Ping Execute Command
-/// Assumption: Bad Connection (reset)
+/// Assumption:
+/// 1. Bad Connection (reset)
 #[rstest]
 // Equal to
 #[case(None, eq(RESPType::SimpleString("\"PONG\"".to_string())))]
@@ -57,7 +61,7 @@ async fn test_ping_execute_cnxn_err(
         .expect_write_frame()
         .with(expected_input_cnxn_write_frame)
         .times(1)
-        .returning(|_x| {
+        .returning(|_| {
             Err(tokio::io::Error::new(
                 tokio::io::ErrorKind::ConnectionReset,
                 "Connection Reset",
@@ -70,7 +74,8 @@ async fn test_ping_execute_cnxn_err(
 }
 
 /// Echo Execute Command
-/// Assumption: Good Connection
+/// Assumption:
+/// 1. Good Connection
 #[rstest]
 // Equal to
 #[case("HELLO".to_string(), eq(RESPType::SimpleString("\"HELLO\"".to_string())))]
@@ -92,7 +97,7 @@ async fn test_echo_execute_cnxn_ok(
         .expect_write_frame()
         .with(expected_input_cnxn_write_frame)
         .times(1)
-        .returning(|_x| Ok(()));
+        .returning(|_| Ok(()));
 
     // Call the function to test
     let result = echo_cmd.execute(&mut mock_cnxn).await;
@@ -100,7 +105,8 @@ async fn test_echo_execute_cnxn_ok(
 }
 
 /// Echo Execute Command
-/// Assumption: Bad Connection
+/// Assumption:
+/// 1. Bad Connection
 #[rstest]
 // Equal to
 #[case("HELLO".to_string(), eq(RESPType::SimpleString("\"HELLO\"".to_string())))]
@@ -131,5 +137,206 @@ async fn test_echo_execute_cnxn_err(
 
     // Call the function to test
     let result = echo_cmd.execute(&mut mock_cnxn).await;
+    assert!(result.is_err());
+}
+
+/// Set Execute Command
+/// Assumption:
+/// 1. No previous value exists at the input key
+/// 2. Good Connection
+#[rstest]
+// Equal to
+#[case("John".to_string(), redust::DataType::String("Doe".to_string()), None, false, false, false, eq(RESPType::SimpleString("\"OK\"".to_string())))]
+// Not Equal to
+#[case("John".to_string(), redust::DataType::String("Doe".to_string()), None, false, false, false, ne(RESPType::SimpleString("\"TEST\"".to_string())))]
+#[tokio::test]
+async fn test_set_execute_no_prev_value_cnxn_ok(
+    #[case] key: String,
+    #[case] value: redust::DataType,
+    #[case] duration: Option<chrono::Duration>,
+    #[case] nx: bool,
+    #[case] xx: bool,
+    #[case] get: bool,
+    #[case] expected_input_cnxn_write_frame: EqPredicate<RESPType>,
+) {
+    // Create the Command instance
+    let set_cmd = Set::new(key.clone(), value.clone(), duration, nx, xx, get);
+
+    // Create the Shared Store Mock
+    let mut mock_shared_store = MockSharedStoreBase::new();
+
+    mock_shared_store
+        .expect_set()
+        .with(eq(key), eq(value), eq(duration), eq(nx), eq(xx))
+        .times(1)
+        .returning(|_, _, _, _, _| Ok(None));
+
+    // Create the Connection Mock
+    let mut mock_cnxn = MockConnectionBase::new();
+
+    // Add the expected conditions, to assert for the Mocked Connection
+    mock_cnxn
+        .expect_write_frame()
+        .with(expected_input_cnxn_write_frame)
+        .times(1)
+        .returning(|_| Ok(()));
+
+    // Call the function to test
+    let result = set_cmd.execute(&mock_shared_store, &mut mock_cnxn).await;
+    assert!(result.is_ok());
+}
+
+/// Set Execute Command
+/// Assumption:
+/// 1. Previous value of "HELLO, WORLD" exists at the input key
+/// 2. Good Connection
+#[rstest]
+// Equal to, with GET = true
+#[case("John".to_string(), redust::DataType::String("Doe".to_string()), None, false, false, true, eq(RESPType::BulkString(Some(BulkStringData{text:"\"HELLO, WORLD\"".to_string(), prefix_length: 14}))))]
+// Equal to, with GET = false
+#[case("John".to_string(), redust::DataType::String("Doe".to_string()), None, false, false, false, eq(RESPType::SimpleString("\"OK\"".to_string())))]
+// Not Equal to, with GET = true
+#[case("John".to_string(), redust::DataType::String("Doe".to_string()), None, false, false, true, ne(RESPType::SimpleString("\"OK\"".to_string())))]
+#[tokio::test]
+async fn test_set_execute_prev_value_exists_cnxn_ok(
+    #[case] key: String,
+    #[case] value: redust::DataType,
+    #[case] duration: Option<chrono::Duration>,
+    #[case] nx: bool,
+    #[case] xx: bool,
+    #[case] get: bool,
+    #[case] expected_input_cnxn_write_frame: EqPredicate<RESPType>,
+) {
+    // Create the Command instance
+    let set_cmd = Set::new(key.clone(), value.clone(), duration, nx, xx, get);
+
+    // Create the Shared Store Mock
+    let mut mock_shared_store = MockSharedStoreBase::new();
+
+    mock_shared_store
+        .expect_set()
+        .with(eq(key), eq(value), eq(duration), eq(nx), eq(xx))
+        .times(1)
+        .returning(|_, _, _, _, _| Ok(Some(DataType::String("HELLO, WORLD".to_string()))));
+
+    // Create the Connection Mock
+    let mut mock_cnxn = MockConnectionBase::new();
+
+    // Add the expected conditions, to assert for the Mocked Connection
+    mock_cnxn
+        .expect_write_frame()
+        .with(expected_input_cnxn_write_frame)
+        .times(1)
+        .returning(|_| Ok(()));
+
+    // Call the function to test
+    let result = set_cmd.execute(&mock_shared_store, &mut mock_cnxn).await;
+    assert!(result.is_ok());
+}
+
+/// Set Execute Command
+/// Assumption:
+/// 1. Parse Error occurs at the Data Store
+/// 2. Good Connection
+#[rstest]
+// Although the NX and XX values don't matter since the Data Store is mocked.
+// Equal to, NX = true, XX = false
+#[case("John".to_string(), redust::DataType::String("Doe".to_string()), None, true, false, true, eq(RESPType::Error("syntax error".to_string())))]
+// Equal to, NX = true, XX = true
+#[case("John".to_string(), redust::DataType::String("Doe".to_string()), None, true, true, false, ne(RESPType::SimpleString("\"OK\"".to_string())))]
+#[tokio::test]
+async fn test_set_execute_data_store_err_cnxn_ok(
+    #[case] key: String,
+    #[case] value: redust::DataType,
+    #[case] duration: Option<chrono::Duration>,
+    #[case] nx: bool,
+    #[case] xx: bool,
+    #[case] get: bool,
+    #[case] expected_input_cnxn_write_frame: EqPredicate<RESPType>,
+) {
+    // Create the Command instance
+    let set_cmd = Set::new(key.clone(), value.clone(), duration, nx, xx, get);
+
+    // Create the Shared Store Mock
+    let mut mock_shared_store = MockSharedStoreBase::new();
+
+    mock_shared_store
+        .expect_set()
+        .with(eq(key), eq(value), eq(duration), eq(nx), eq(xx))
+        .times(1)
+        .returning(|_, _, _, _, _| {
+            Err(redust::cmd::ParseError::SyntaxError(
+                "syntax error".to_string(),
+            ))
+        });
+
+    // Create the Connection Mock
+    let mut mock_cnxn = MockConnectionBase::new();
+
+    // Add the expected conditions, to assert for the Mocked Connection
+    mock_cnxn
+        .expect_write_frame()
+        .with(expected_input_cnxn_write_frame)
+        .times(1)
+        .returning(|_| Ok(()));
+
+    // Call the function to test
+    let result = set_cmd.execute(&mock_shared_store, &mut mock_cnxn).await;
+    assert!(result.is_ok());
+}
+
+/// Set Execute Command
+/// Assumption:
+/// 1. Parse Error occurs at the Data Store
+/// 2. Bad Connection (reset)
+#[rstest]
+// Although the NX and XX values don't matter since the Data Store is mocked.
+// Equal to, NX = true, XX = false
+#[case("John".to_string(), redust::DataType::String("Doe".to_string()), None, true, false, true, eq(RESPType::Error("syntax error".to_string())))]
+// Equal to, NX = true, XX = true
+#[case("John".to_string(), redust::DataType::String("Doe".to_string()), None, true, true, false, ne(RESPType::SimpleString("\"OK\"".to_string())))]
+#[tokio::test]
+async fn test_set_execute_data_store_err_cnxn_err(
+    #[case] key: String,
+    #[case] value: redust::DataType,
+    #[case] duration: Option<chrono::Duration>,
+    #[case] nx: bool,
+    #[case] xx: bool,
+    #[case] get: bool,
+    #[case] expected_input_cnxn_write_frame: EqPredicate<RESPType>,
+) {
+    // Create the Command instance
+    let set_cmd = Set::new(key.clone(), value.clone(), duration, nx, xx, get);
+
+    // Create the Shared Store Mock
+    let mut mock_shared_store = MockSharedStoreBase::new();
+
+    mock_shared_store
+        .expect_set()
+        .with(eq(key), eq(value), eq(duration), eq(nx), eq(xx))
+        .times(1)
+        .returning(|_, _, _, _, _| {
+            Err(redust::cmd::ParseError::SyntaxError(
+                "syntax error".to_string(),
+            ))
+        });
+
+    // Create the Connection Mock
+    let mut mock_cnxn = MockConnectionBase::new();
+
+    // Add the expected conditions, to assert for the Mocked Connection
+    mock_cnxn
+        .expect_write_frame()
+        .with(expected_input_cnxn_write_frame)
+        .times(1)
+        .returning(|_| {
+            Err(tokio::io::Error::new(
+                tokio::io::ErrorKind::ConnectionReset,
+                "Connection Reset",
+            ))
+        });
+
+    // Call the function to test
+    let result = set_cmd.execute(&mock_shared_store, &mut mock_cnxn).await;
     assert!(result.is_err());
 }
