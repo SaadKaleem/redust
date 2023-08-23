@@ -4,7 +4,13 @@ pub use ping::Ping;
 mod echo;
 pub use echo::Echo;
 
-use crate::{Connection, RESPType};
+mod set;
+pub use set::Set;
+
+mod get;
+pub use get::Get;
+
+use crate::{Connection, RESPType, SharedStore};
 use std::fmt;
 
 /// Methods called on `Command` are delegated to the command implementation.
@@ -13,12 +19,14 @@ use std::fmt;
 pub enum Command {
     Ping(Ping),
     Echo(Echo),
+    Set(Set),
+    Get(Get),
 }
 
 #[derive(Debug)]
 pub enum ParseError {
-    MissingCmdArg(String),
-    ExtraCmdArg(String),
+    SyntaxError(String),
+    ConditionNotMet(String),
     UnrecognizedCmd(String),
     ExpectedArrayType(String),
     ExpectedStringType(String),
@@ -29,8 +37,8 @@ impl std::error::Error for ParseError {}
 impl fmt::Display for ParseError {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ParseError::MissingCmdArg(msg) => msg.fmt(fmt),
-            ParseError::ExtraCmdArg(msg) => msg.fmt(fmt),
+            ParseError::SyntaxError(msg) => msg.fmt(fmt),
+            ParseError::ConditionNotMet(msg) => msg.fmt(fmt),
             ParseError::UnrecognizedCmd(msg) => msg.fmt(fmt),
             ParseError::ExpectedArrayType(msg) => msg.fmt(fmt),
             ParseError::ExpectedStringType(msg) => msg.fmt(fmt),
@@ -46,7 +54,7 @@ impl Command {
             RESPType::Array(array) => array,
             frame => {
                 return Err(ParseError::ExpectedArrayType(format!(
-                    "ERR: Expected Array got {:?}",
+                    "ERR Expected Array got {:?}",
                     frame
                 )))
             }
@@ -60,16 +68,18 @@ impl Command {
             cmd_strings.push(text);
         }
 
-        let cmd_name = cmd_strings.get(0).unwrap().to_lowercase();
+        let cmd_name = cmd_strings.get(0).unwrap();
 
-        println!("{:?}", cmd_name.as_str());
-        let cmd = match cmd_name.as_str() {
+        // println!("{:?}", cmd_name.as_str());
+        let cmd: Command = match cmd_name.to_lowercase().as_str() {
             "ping" => Command::Ping(Ping::parse(cmd_strings)?),
             "echo" => Command::Echo(Echo::parse(cmd_strings)?),
+            "set" => Command::Set(Set::parse(cmd_strings)?),
+            "get" => Command::Get(Get::parse(cmd_strings)?),
             _ => {
-                println!("Unrecognized Command");
                 return Err(ParseError::UnrecognizedCmd(format!(
-                    "ERR: Unrecognized Command"
+                    "unknown command '{}'",
+                    cmd_name
                 )));
             }
         };
@@ -83,7 +93,7 @@ impl Command {
             RESPType::SimpleString(val) => val,
             _ => {
                 return Err(ParseError::ExpectedStringType(format!(
-                    "ERR: Expected String Type got {:?}",
+                    "ERR Expected String Type got {:?}",
                     frame
                 )))
             }
@@ -92,10 +102,16 @@ impl Command {
         Ok(text)
     }
 
-    pub async fn execute(self, cnxn: &mut Connection) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn execute(
+        self,
+        shared_store: &SharedStore,
+        cnxn: &mut Connection,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         match self {
             Command::Ping(cmd) => cmd.execute(cnxn).await,
             Command::Echo(cmd) => cmd.execute(cnxn).await,
+            Command::Set(cmd) => cmd.execute(shared_store, cnxn).await,
+            Command::Get(cmd) => cmd.execute(shared_store, cnxn).await,
         }
     }
 }

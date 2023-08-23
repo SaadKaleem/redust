@@ -1,7 +1,33 @@
+use crate::{deserialize_buffer, serialize_data, RESPType};
+use async_trait::async_trait;
+use mockall::automock;
 use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
-use crate::{deserialize_buffer, serialize_data, RESPType};
+/// I wanted to conditionally compile automock
+/// based on cargo `test` attr, but it wouldn't
+/// work.
+///
+/// Current workaround is to have `mockall` as a
+/// dependency, as I wasn't able to have `mockall` 
+/// as a dev-dependency and also import the Mocked 
+/// instances in the tests/ dir
+///
+/// "those in a tests directory, behave like independent crates that use your main library.
+/// As a consequence the library itself is not compiled in test mode for integration tests,
+/// and your cfg_attr disables automock"
+///
+/// Refer to:
+/// https://stackoverflow.com/q/76831451
+/// https://github.com/rust-lang/cargo/issues/2911
+///
+#[automock]
+#[async_trait]
+pub trait ConnectionBase: Send + Sync {
+    async fn read_frame(&mut self) -> Result<Option<RESPType>, Box<dyn std::error::Error>>;
+
+    async fn write_frame(&mut self, frame: &RESPType) -> tokio::io::Result<()>;
+}
 
 /// The purpose of `Connection` is to read and write frames on the
 /// underlying `TcpStream`, which is established between the client
@@ -37,8 +63,11 @@ impl Connection {
             buffer: Vec::with_capacity(4 * 1024),
         }
     }
+}
 
-    pub async fn read_frame(&mut self) -> Result<Option<RESPType>, Box<dyn std::error::Error>> {
+#[async_trait]
+impl ConnectionBase for Connection {
+    async fn read_frame(&mut self) -> Result<Option<RESPType>, Box<dyn std::error::Error>> {
         loop {
             // Attempt to deserialize a frame from the data in the buffer.
             // If successful, a `RESPType` frame is returned.
@@ -48,9 +77,7 @@ impl Connection {
             // Therefore, we will keep reading more data.
             //
             // If the frame does not fit into the buffer, we will reallocate space anyway, to keep reading.
-            println!("Buffer before reading: {:?}", self.buffer);
             let (frame, frame_size) = deserialize_buffer(&self.buffer.as_slice());
-            println!("Buffer after reading: {:?}", self.buffer);
             // If we got a valid frame, return it and
             // drain the buffer upto the frame_size
             if frame.is_some() {
@@ -77,9 +104,10 @@ impl Connection {
 
     /// Serializes the frame and attempt to
     /// write the whole buffer to the TCPStream
-    pub async fn write_frame(&mut self, frame: &RESPType) -> io::Result<()> {
+    async fn write_frame(&mut self, frame: &RESPType) -> io::Result<()> {
         let data = serialize_data(&frame).unwrap();
 
+        // println!("{:?}", String::from_utf8(data.clone()));
         self.stream.write_all(&data).await?;
 
         // Make sure that any buffered contents are written.

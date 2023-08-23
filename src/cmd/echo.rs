@@ -1,5 +1,5 @@
 use crate::cmd::ParseError;
-use crate::{Connection, RESPType};
+use crate::{ConnectionBase, RESPType};
 
 #[derive(Debug, Default)]
 pub struct Echo {
@@ -12,22 +12,40 @@ impl Echo {
         Echo { msg }
     }
 
+    /// Parsing the necessary arguments for the `Echo` command
+    ///
+    /// Syntax:
+    /// ECHO message
     pub fn parse(cmd_strings: Vec<String>) -> Result<Echo, ParseError> {
-        match cmd_strings.get(1) {
-            Some(msg) => Ok(Echo::new(msg.into())),
-            None => Err(ParseError::MissingCmdArg(
-                "ERR: Missing Argument".to_string(),
-            )),
+        if cmd_strings.len() > 2 {
+            return Err(ParseError::SyntaxError(
+                "ERR wrong number of arguments for 'echo' command".to_string(),
+            ));
+        } else {
+            match cmd_strings.get(1) {
+                Some(msg) => return Ok(Echo::new(msg.into())),
+                None => {
+                    return Err(ParseError::SyntaxError(
+                        "ERR wrong number of arguments for 'echo' command".to_string(),
+                    ))
+                }
+            }
         }
     }
 
     /// Execute the `Echo` command
-    pub async fn execute(self, cnxn: &mut Connection) -> Result<(), Box<dyn std::error::Error>> {
-        let resp = RESPType::SimpleString(self.msg.to_string());
+    pub async fn execute(
+        self,
+        cnxn: &mut dyn ConnectionBase,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let resp = RESPType::SimpleString(format!("{}{}{}", "\"", self.msg, "\""));
 
         // Write the response back to the client
-        cnxn.write_frame(&resp).await?;
+        let result = cnxn.write_frame(&resp).await;
 
-        Ok(())
+        match result {
+            Err(err) => Err(Box::new(err)), // Propagate the error
+            _ => Ok(()),                    // No Error, return Ok
+        }
     }
 }
