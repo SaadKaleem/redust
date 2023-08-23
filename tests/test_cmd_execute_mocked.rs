@@ -7,7 +7,7 @@ use redust::{MockConnectionBase, MockSharedStoreBase};
 use rstest::rstest;
 
 /// Ping Execute Command
-/// 
+///
 /// Assumption:
 /// 1. Good Connection
 #[rstest]
@@ -39,7 +39,7 @@ async fn test_ping_execute_cnxn_ok(
 }
 
 /// Ping Execute Command
-/// 
+///
 /// Assumption:
 /// 1. Bad Connection (reset)
 #[rstest]
@@ -76,7 +76,7 @@ async fn test_ping_execute_cnxn_err(
 }
 
 /// Echo Execute Command
-/// 
+///
 /// Assumption:
 /// 1. Good Connection
 #[rstest]
@@ -108,7 +108,7 @@ async fn test_echo_execute_cnxn_ok(
 }
 
 /// Echo Execute Command
-/// 
+///
 /// Assumption:
 /// 1. Bad Connection
 #[rstest]
@@ -145,7 +145,7 @@ async fn test_echo_execute_cnxn_err(
 }
 
 /// Get Execute Command
-/// 
+///
 /// Assumption:
 /// 1. No value exists at the input key
 /// 2. Good Connection
@@ -187,7 +187,7 @@ async fn test_get_execute_no_key_value_cnxn_ok(
 }
 
 /// Get Execute Command
-/// 
+///
 /// Assumption:
 /// 1. Value exists at the input key
 /// 2. Good Connection
@@ -228,9 +228,8 @@ async fn test_get_execute_key_value_exists_cnxn_ok(
     assert!(result.is_ok());
 }
 
-
 /// Set Execute Command
-/// 
+///
 /// Assumption:
 /// 1. No previous value exists at the input key
 /// 2. Good Connection
@@ -277,7 +276,7 @@ async fn test_set_execute_no_prev_value_cnxn_ok(
 }
 
 /// Set Execute Command
-/// 
+///
 /// Assumption:
 /// 1. Previous value of "HELLO, WORLD" exists at the input key
 /// 2. Good Connection
@@ -326,7 +325,7 @@ async fn test_set_execute_prev_value_exists_cnxn_ok(
 }
 
 /// Set Execute Command
-/// 
+///
 /// Assumption:
 /// 1. Parse Error occurs at the Data Store
 /// 2. Good Connection
@@ -378,7 +377,7 @@ async fn test_set_execute_data_store_err_cnxn_ok(
 }
 
 /// Set Execute Command
-/// 
+///
 /// Assumption:
 /// 1. Parse Error occurs at the Data Store
 /// 2. Bad Connection (reset)
