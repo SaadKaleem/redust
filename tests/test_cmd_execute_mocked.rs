@@ -2,11 +2,12 @@ use mockall::predicate::{eq, ne};
 use predicates::ord::EqPredicate;
 use redust::protocol_handler::BulkStringData;
 use redust::DataType;
-use redust::{cmd::Echo, cmd::Ping, cmd::Set, RESPType};
+use redust::{cmd::Echo, cmd::Get, cmd::Ping, cmd::Set, RESPType};
 use redust::{MockConnectionBase, MockSharedStoreBase};
 use rstest::rstest;
 
 /// Ping Execute Command
+/// 
 /// Assumption:
 /// 1. Good Connection
 #[rstest]
@@ -38,6 +39,7 @@ async fn test_ping_execute_cnxn_ok(
 }
 
 /// Ping Execute Command
+/// 
 /// Assumption:
 /// 1. Bad Connection (reset)
 #[rstest]
@@ -74,6 +76,7 @@ async fn test_ping_execute_cnxn_err(
 }
 
 /// Echo Execute Command
+/// 
 /// Assumption:
 /// 1. Good Connection
 #[rstest]
@@ -105,6 +108,7 @@ async fn test_echo_execute_cnxn_ok(
 }
 
 /// Echo Execute Command
+/// 
 /// Assumption:
 /// 1. Bad Connection
 #[rstest]
@@ -140,7 +144,93 @@ async fn test_echo_execute_cnxn_err(
     assert!(result.is_err());
 }
 
+/// Get Execute Command
+/// 
+/// Assumption:
+/// 1. No value exists at the input key
+/// 2. Good Connection
+#[rstest]
+// Equal to
+#[case("John".to_string(), eq(RESPType::BulkString(None)))]
+// Not Equal to
+#[case("John".to_string(), ne(RESPType::SimpleString("\"OK\"".to_string())))]
+#[tokio::test]
+async fn test_get_execute_no_key_value_cnxn_ok(
+    #[case] key: String,
+    #[case] expected_input_cnxn_write_frame: EqPredicate<RESPType>,
+) {
+    // Create the Command instance
+    let get_cmd = Get::new(key.clone());
+
+    // Create the Shared Store Mock
+    let mut mock_shared_store = MockSharedStoreBase::new();
+
+    mock_shared_store
+        .expect_get()
+        .with(eq(key))
+        .times(1)
+        .returning(|_| None);
+
+    // Create the Connection Mock
+    let mut mock_cnxn = MockConnectionBase::new();
+
+    // Add the expected conditions, to assert for the Mocked Connection
+    mock_cnxn
+        .expect_write_frame()
+        .with(expected_input_cnxn_write_frame)
+        .times(1)
+        .returning(|_| Ok(()));
+
+    // Call the function to test
+    let result = get_cmd.execute(&mock_shared_store, &mut mock_cnxn).await;
+    assert!(result.is_ok());
+}
+
+/// Get Execute Command
+/// 
+/// Assumption:
+/// 1. Value exists at the input key
+/// 2. Good Connection
+#[rstest]
+// Equal to
+#[case("John".to_string(), eq(RESPType::BulkString(Some(BulkStringData{text:"\"Doe\"".to_string(), prefix_length: 5}))))]
+// Not Equal to
+#[case("John".to_string(), ne(RESPType::SimpleString("\"Doe\"".to_string())))]
+#[tokio::test]
+async fn test_get_execute_key_value_exists_cnxn_ok(
+    #[case] key: String,
+    #[case] expected_input_cnxn_write_frame: EqPredicate<RESPType>,
+) {
+    // Create the Command instance
+    let get_cmd = Get::new(key.clone());
+
+    // Create the Shared Store Mock
+    let mut mock_shared_store = MockSharedStoreBase::new();
+
+    mock_shared_store
+        .expect_get()
+        .with(eq(key))
+        .times(1)
+        .returning(|_| Some(DataType::String("\"Doe\"".to_string())));
+
+    // Create the Connection Mock
+    let mut mock_cnxn = MockConnectionBase::new();
+
+    // Add the expected conditions, to assert for the Mocked Connection
+    mock_cnxn
+        .expect_write_frame()
+        .with(expected_input_cnxn_write_frame)
+        .times(1)
+        .returning(|_| Ok(()));
+
+    // Call the function to test
+    let result = get_cmd.execute(&mock_shared_store, &mut mock_cnxn).await;
+    assert!(result.is_ok());
+}
+
+
 /// Set Execute Command
+/// 
 /// Assumption:
 /// 1. No previous value exists at the input key
 /// 2. Good Connection
@@ -187,6 +277,7 @@ async fn test_set_execute_no_prev_value_cnxn_ok(
 }
 
 /// Set Execute Command
+/// 
 /// Assumption:
 /// 1. Previous value of "HELLO, WORLD" exists at the input key
 /// 2. Good Connection
@@ -235,6 +326,7 @@ async fn test_set_execute_prev_value_exists_cnxn_ok(
 }
 
 /// Set Execute Command
+/// 
 /// Assumption:
 /// 1. Parse Error occurs at the Data Store
 /// 2. Good Connection
@@ -286,6 +378,7 @@ async fn test_set_execute_data_store_err_cnxn_ok(
 }
 
 /// Set Execute Command
+/// 
 /// Assumption:
 /// 1. Parse Error occurs at the Data Store
 /// 2. Bad Connection (reset)
