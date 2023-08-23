@@ -1,4 +1,4 @@
-use crate::{cmd::Command, connection::Connection, RESPType, SharedStore};
+use crate::{cmd::Command, Connection, ConnectionBase, RESPType, SharedStore};
 use tokio::net::TcpListener;
 
 /// Server listener state. Created in the `run` call. It includes a `run` method

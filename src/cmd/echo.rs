@@ -1,5 +1,5 @@
 use crate::cmd::ParseError;
-use crate::{Connection, RESPType};
+use crate::{ConnectionBase, RESPType};
 
 #[derive(Debug, Default)]
 pub struct Echo {
@@ -34,12 +34,18 @@ impl Echo {
     }
 
     /// Execute the `Echo` command
-    pub async fn execute(self, cnxn: &mut Connection) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn execute(
+        self,
+        cnxn: &mut dyn ConnectionBase,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let resp = RESPType::SimpleString(format!("{}{}{}", "\"", self.msg, "\""));
 
         // Write the response back to the client
-        cnxn.write_frame(&resp).await?;
+        let result = cnxn.write_frame(&resp).await;
 
-        Ok(())
+        match result {
+            Err(err) => Err(Box::new(err)), // Propagate the error
+            _ => Ok(()),                    // No Error, return Ok
+        }
     }
 }

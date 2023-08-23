@@ -1,5 +1,5 @@
 use crate::cmd::ParseError;
-use crate::{Connection, RESPType};
+use crate::{ConnectionBase, RESPType};
 
 #[derive(Debug, Default)]
 pub struct Ping {
@@ -37,15 +37,21 @@ impl Ping {
     }
 
     /// Execute the "Ping" command and return PONG or the optional message if provided.
-    pub async fn execute(self, cnxn: &mut Connection) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn execute(
+        self,
+        cnxn: &mut dyn ConnectionBase,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let resp = match self.msg {
             Some(msg) => RESPType::SimpleString(format!("{}{}{}", "\"", msg, "\"")),
             None => RESPType::SimpleString("\"PONG\"".to_string()),
         };
 
         // Write the response back to the client
-        let _ = cnxn.write_frame(&resp).await;
+        let result = cnxn.write_frame(&resp).await;
 
-        Ok(())
+        match result {
+            Err(err) => Err(Box::new(err)), // Propagate the error
+            _ => Ok(()),                    // No Error, return Ok
+        }
     }
 }

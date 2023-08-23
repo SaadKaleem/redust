@@ -1,6 +1,6 @@
 use crate::cmd::ParseError;
 use crate::protocol_handler::BulkStringData;
-use crate::{Connection, DataType, RESPType, SharedStore};
+use crate::{ConnectionBase, DataType, RESPType, SharedStore};
 
 /// The classic GET operation in Redis
 #[derive(Debug)]
@@ -37,7 +37,7 @@ impl Get {
     pub async fn execute(
         self,
         shared_store: &SharedStore,
-        cnxn: &mut Connection,
+        cnxn: &mut dyn ConnectionBase,
     ) -> Result<(), Box<dyn std::error::Error>> {
         // Get the key in the shared store
         let result: Option<DataType> = shared_store.get(self.key);

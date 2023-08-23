@@ -2,7 +2,7 @@ use chrono::Duration;
 
 use crate::cmd::ParseError;
 use crate::protocol_handler::BulkStringData;
-use crate::{Connection, DataType, RESPType, SharedStore};
+use crate::{ConnectionBase, DataType, RESPType, SharedStore};
 
 /// The classic SET operation in Redis
 #[derive(Debug)]
@@ -94,7 +94,7 @@ impl Set {
     pub async fn execute(
         self,
         shared_store: &SharedStore,
-        cnxn: &mut Connection,
+        cnxn: &mut dyn ConnectionBase,
     ) -> Result<(), Box<dyn std::error::Error>> {
         // Set the key:value in the shared store
         let result: Result<Option<DataType>, ParseError> =
