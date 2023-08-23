@@ -49,7 +49,9 @@ impl Set {
     /// Parsing the necessary arguments for the `Set` command
     ///
     /// Syntax:
-    /// SET key value [NX | XX] [GET]
+    /// SET key value [NX | XX] [GET] [EX seconds | PX milliseconds |
+    ///    EXAT unix-time-seconds | PXAT unix-time-milliseconds]
+    ///
     pub fn parse(cmd_strings: Vec<String>) -> Result<Set, ParseError> {
         if cmd_strings.len() < 3 {
             return Err(ParseError::SyntaxError(
