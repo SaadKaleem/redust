@@ -4,8 +4,14 @@ use mockall::automock;
 use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
-/// Cannot have `mockall` as a dev-dependency
-/// and also import the Mocked attr in the tests/ dir
+/// I wanted to conditionally compile automock
+/// based on cargo `test` attr, but it wouldn't
+/// work.
+///
+/// Current workaround is to have `mockall` as a
+/// dependency, as I wasn't able to have `mockall` 
+/// as a dev-dependency and also import the Mocked 
+/// instances in the tests/ dir
 ///
 /// "those in a tests directory, behave like independent crates that use your main library.
 /// As a consequence the library itself is not compiled in test mode for integration tests,
