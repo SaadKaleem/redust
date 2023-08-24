@@ -2,7 +2,7 @@ use mockall::predicate::{eq, ne};
 use predicates::ord::EqPredicate;
 use redust::protocol_handler::BulkStringData;
 use redust::DataType;
-use redust::{cmd::Echo, cmd::Get, cmd::Ping, cmd::Set, RESPType};
+use redust::{cmd::Echo, cmd::Exists, cmd::Get, cmd::Ping, cmd::Set, RESPType};
 use redust::{MockConnectionBase, MockSharedStoreBase};
 use rstest::rstest;
 
@@ -430,5 +430,98 @@ async fn test_set_execute_data_store_err_cnxn_err(
 
     // Call the function to test
     let result = set_cmd.execute(&mock_shared_store, &mut mock_cnxn).await;
+    assert!(result.is_err());
+}
+
+/// EXISTS Execute Command
+///
+/// Assumption:
+/// 1. All keys Exist
+/// 2. Good Connection
+#[rstest]
+// Equal to
+#[case(vec!["Key1".to_string(), "Key2".to_string()], eq(RESPType::Integer(2)))]
+// Not Equal to
+#[case(vec!["Key1".to_string(), "Key2".to_string()], ne(RESPType::Integer(1)))]
+#[tokio::test]
+async fn test_exists_execute_all_keys_exist_cnxn_ok(
+    #[case] keys: Vec<String>,
+    #[case] expected_input_cnxn_write_frame: EqPredicate<RESPType>,
+) {
+    // Create the Command instance
+    let exists_cmd = Exists::new(keys.clone());
+
+    // Create the Shared Store Mock
+    let mut mock_shared_store = MockSharedStoreBase::new();
+
+    let keys_length: u64 = keys.len() as u64;
+
+    mock_shared_store
+        .expect_exists()
+        .with(eq(keys))
+        .times(1)
+        .returning(move |_| keys_length);
+
+    // Create the Connection Mock
+    let mut mock_cnxn = MockConnectionBase::new();
+
+    // Add the expected conditions, to assert for the Mocked Connection
+    mock_cnxn
+        .expect_write_frame()
+        .with(expected_input_cnxn_write_frame)
+        .times(1)
+        .returning(|_| Ok(()));
+
+    // Call the function to test
+    let result = exists_cmd.execute(&mock_shared_store, &mut mock_cnxn).await;
+    assert!(result.is_ok());
+}
+
+/// EXISTS Execute Command
+///
+/// Assumption:
+/// 1. keys.len() - 1 e.g. If two keys, then only one key exists.
+/// 2. Bad Connection
+#[rstest]
+// Equal to
+#[case(vec!["Key1".to_string(), "Key2".to_string()], ne(RESPType::Integer(2)))]
+// Not Equal to
+#[case(vec!["Key1".to_string(), "Key2".to_string()], eq(RESPType::Integer(1)))]
+#[tokio::test]
+async fn test_exists_execute_all_keys_exist_cnxn_err(
+    #[case] keys: Vec<String>,
+    #[case] expected_input_cnxn_write_frame: EqPredicate<RESPType>,
+) {
+    // Create the Command instance
+    let exists_cmd = Exists::new(keys.clone());
+
+    // Create the Shared Store Mock
+    let mut mock_shared_store = MockSharedStoreBase::new();
+
+    let keys_length: u64 = (keys.len() as u64) - 1;
+
+    mock_shared_store
+        .expect_exists()
+        .with(eq(keys))
+        .times(1)
+        .returning(move |_| keys_length);
+
+    // Create the Connection Mock
+    let mut mock_cnxn = MockConnectionBase::new();
+
+    // Add the expected conditions, to assert for the Mocked Connection
+    mock_cnxn
+        .expect_write_frame()
+        .with(expected_input_cnxn_write_frame)
+        .times(1)
+        .returning(|_| {
+            Err(tokio::io::Error::new(
+                tokio::io::ErrorKind::ConnectionReset,
+                "Connection Reset",
+            ))
+        });
+
+    // Call the function to test
+    let result = exists_cmd.execute(&mock_shared_store, &mut mock_cnxn).await;
     assert!(result.is_err());
 }
