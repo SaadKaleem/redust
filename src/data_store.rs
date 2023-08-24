@@ -1,14 +1,14 @@
-use crate::cmd::ParseError;
-use async_trait::async_trait;
+use crate::{cmd::ParseError, KEY_EXPIRY_DELAY_MS, KEY_EXPIRY_NUM_KEYS_TO_CHECK};
 use chrono::{DateTime, Duration, Utc};
 use mockall::automock;
+use rand::seq::index::sample;
 use std::{
     collections::{HashMap, LinkedList},
     sync::{Arc, Mutex},
 };
+use tokio::time::sleep;
 
 #[automock]
-#[async_trait]
 pub trait SharedStoreBase: Send + Sync {
     fn set(
         &self,
@@ -20,8 +20,6 @@ pub trait SharedStoreBase: Send + Sync {
     ) -> Result<Option<DataType>, ParseError>;
 
     fn get(&self, key: String) -> Option<DataType>;
-
-    async fn purge_expired_keys(&self);
 }
 
 /// Shared Data Store across all the connections
@@ -84,11 +82,13 @@ impl SharedStore {
                 date_time: HashMap::new(),
             }),
         });
+
+        tokio::spawn(run_key_expiry(shared.clone()));
+
         SharedStore { shared }
     }
 }
 
-#[async_trait]
 impl SharedStoreBase for SharedStore {
     /// Set the `value` associated with the `key`, and an expiration
     /// duration, if provided
@@ -185,8 +185,78 @@ impl SharedStoreBase for SharedStore {
             }
         }
     }
+}
 
-    async fn purge_expired_keys(&self) {
-        todo!()
+impl GuardedDataStore {
+    /// Expiry Algorithm:
+    /// 1. Every 100 ms, test 20 keys at random from the set of keys, which have an expiry time set.
+    /// 2. Delete all the expired keys from both HashMaps.
+    /// 3. If more than 25% of the set of 20 keys was expired (5 keys were expired), restart the process from step 1.
+    ///
+    fn purge_expired_keys(&self) {
+        let mut restart: bool = true;
+        // Acquire the Mutex
+        let mut mutex: std::sync::MutexGuard<'_, DataStore> = self.store.lock().unwrap();
+
+        while restart == true {
+            let random_keys: Vec<String>;
+            {
+                let mut rng = rand::thread_rng();
+                // Get the iterator of the keys, of which have an expiry.
+                // Borrow the hashmap
+                let mut keys = mutex.date_time.keys();
+
+                // Get the random indices to collect, for checking purposes.
+                let num_keys = mutex.date_time.len();
+
+                if num_keys == 0 {
+                    return;
+                }
+
+                let num_to_get = std::cmp::min(num_keys, KEY_EXPIRY_NUM_KEYS_TO_CHECK);
+
+                let indices = sample(&mut rng, num_keys, num_to_get);
+
+                // Cloning the individual key is necessary, otherwise we'll still have borrowed the
+                // reference, and wouldn't be able to perform a mutable operation on the HashMap
+                // via mutex.data.remove(...)
+                random_keys = indices
+                    .iter()
+                    .map(|i| keys.nth(i).unwrap().clone())
+                    .collect();
+            }
+
+            // For each of the random keys, check if its expiry has met, if so remove it from both HashMaps.
+            let mut keys_removed: i32 = 0;
+            let keys_picked_length: usize = random_keys.len();
+
+            for key in random_keys {
+                let value = mutex.date_time.get(&key).unwrap();
+                if Utc::now() >= value.expires_at {
+                    mutex.data.remove(&key);
+                    mutex.date_time.remove(&key);
+                    keys_removed += 1;
+                }
+            }
+
+            // If less than 25% of keys, have been removed we do not restart
+            if (keys_removed as f32 / keys_picked_length as f32) < 0.25 {
+                restart = false;
+            }
+        }
+        drop(mutex);
+    }
+}
+
+/// Async function, which calls the `purge_expired_keys` function every X duration
+///
+/// The reason to split this is that async context and synchronized mutexes cannot be shared.
+async fn run_key_expiry(shared: Arc<GuardedDataStore>) {
+    loop {
+        // Purge the expired keys
+        shared.purge_expired_keys();
+
+        // Sleep for 100 ms
+        let _ = sleep(std::time::Duration::from_millis(KEY_EXPIRY_DELAY_MS)).await;
     }
 }
