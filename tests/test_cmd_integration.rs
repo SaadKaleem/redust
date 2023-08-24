@@ -1,3 +1,4 @@
+use chrono::{Duration, Utc};
 use redis::{Client, Connection, RedisResult};
 use redust::{DEFAULT_HOST, DEFAULT_PORT};
 use rstest::fixture;
@@ -175,6 +176,94 @@ fn test_set(
         }
         (Err(expected_err), Err(actual_err)) => {
             assert_eq!(expected_err, actual_err.to_string());
+        }
+        _ => {
+            panic!("Expected and actual responses do not match.");
+        }
+    }
+
+    Ok(())
+}
+
+#[rstest]
+// With EX
+// Not Expired
+#[case(
+    Some(String::from("TestKey1")),
+    Some(String::from("TestValue")),
+    Some(String::from("EX")),
+    Some(String::from("1")),
+    250,
+    Ok(String::from("TestValue"))
+)]
+// With PX
+// Not Expired
+#[case(
+    Some(String::from("TestKey2")),
+    Some(String::from("TestValue")),
+    Some(String::from("PX")),
+    Some(String::from("1000")),
+    250,
+    Ok(String::from("TestValue"))
+)]
+// With PX
+// Expired
+#[case(
+    Some(String::from("TestKey3")),
+    Some(String::from("TestValue")),
+    Some(String::from("PX")),
+    Some(String::from("500")),
+    1000,
+    Err(String::from("(response was nil)"))
+)]
+// With EXAT
+// Not Expired
+#[case(
+    Some(String::from("TestKey4")),
+    Some(String::from("TestValue")),
+    Some(String::from("EXAT")),
+    Some(String::from((Utc::now() + Duration::seconds(2)).timestamp().to_string())),
+    1000,
+    Ok(String::from("TestValue"))
+)]
+// With PXAT
+// Expired
+#[case(
+    Some(String::from("TestKey5")),
+    Some(String::from("TestValue")),
+    Some(String::from("PXAT")),
+    Some(String::from((Utc::now() + Duration::seconds(1)).timestamp_millis().to_string())),
+    1500,
+    Err(String::from("(response was nil)"))
+)]
+fn test_set_and_get_key_expiry(
+    #[case] key: Option<String>,
+    #[case] value: Option<String>,
+    #[case] duration_arg: Option<String>,
+    #[case] timespan_arg: Option<String>,
+    #[case] milliseconds_delay_for: u64,
+    #[case] get_expected_response: Result<String, String>,
+    mut cnxn: Connection,
+) -> RedisResult<()> {
+    let _: Result<String, redis::RedisError> = redis::cmd("SET")
+        .arg(&key)
+        .arg(&value)
+        .arg(&duration_arg)
+        .arg(&timespan_arg)
+        .query(&mut cnxn);
+
+    std::thread::sleep(std::time::Duration::from_millis(milliseconds_delay_for));
+
+    let get_actual_response: Result<String, redis::RedisError> =
+        redis::cmd("GET").arg(&key).query(&mut cnxn);
+
+    // Compare the two Result values using assert_eq!
+    match (get_expected_response, get_actual_response) {
+        (Ok(expected), Ok(actual)) => {
+            assert_eq!(expected, actual);
+        }
+        (Err(expected_err), Err(actual_err)) => {
+            assert!(actual_err.to_string().ends_with(expected_err.as_str()));
         }
         _ => {
             panic!("Expected and actual responses do not match.");
