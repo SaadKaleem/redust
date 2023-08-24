@@ -9,8 +9,8 @@ use tokio::net::TcpStream;
 /// work.
 ///
 /// Current workaround is to have `mockall` as a
-/// dependency, as I wasn't able to have `mockall` 
-/// as a dev-dependency and also import the Mocked 
+/// dependency, as I wasn't able to have `mockall`
+/// as a dev-dependency and also import the Mocked
 /// instances in the tests/ dir
 ///
 /// "those in a tests directory, behave like independent crates that use your main library.
