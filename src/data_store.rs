@@ -1,4 +1,5 @@
 use crate::cmd::ParseError;
+use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use mockall::automock;
 use std::{
@@ -7,6 +8,7 @@ use std::{
 };
 
 #[automock]
+#[async_trait]
 pub trait SharedStoreBase: Send + Sync {
     fn set(
         &self,
@@ -18,6 +20,8 @@ pub trait SharedStoreBase: Send + Sync {
     ) -> Result<Option<DataType>, ParseError>;
 
     fn get(&self, key: String) -> Option<DataType>;
+
+    async fn purge_expired_keys(&self);
 }
 
 /// Shared Data Store across all the connections
@@ -84,6 +88,7 @@ impl SharedStore {
     }
 }
 
+#[async_trait]
 impl SharedStoreBase for SharedStore {
     /// Set the `value` associated with the `key`, and an expiration
     /// duration, if provided
@@ -179,5 +184,9 @@ impl SharedStoreBase for SharedStore {
                 return None;
             }
         }
+    }
+
+    async fn purge_expired_keys(&self) {
+        todo!()
     }
 }
