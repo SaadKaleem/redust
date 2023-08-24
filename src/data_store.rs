@@ -18,6 +18,8 @@ pub trait SharedStoreBase: Send + Sync {
     ) -> Result<Option<DataType>, ParseError>;
 
     fn get(&self, key: String) -> Option<DataType>;
+
+    fn exists(&self, keys: Vec<String>) -> u64;
 }
 
 /// Shared Data Store across all the connections
@@ -166,5 +168,20 @@ impl SharedStoreBase for SharedStore {
                 return None;
             }
         }
+    }
+
+    fn exists(&self, keys: Vec<String>) -> u64 {
+        // Acquire the Mutex
+        let mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
+
+        let mut count: u64 = 0;
+
+        for k in keys {
+            if mutex.data.contains_key(&k) == true {
+                count += 1;
+            }
+        }
+
+        count
     }
 }

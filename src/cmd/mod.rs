@@ -10,6 +10,9 @@ pub use set::Set;
 mod get;
 pub use get::Get;
 
+mod exists;
+pub use exists::Exists;
+
 use crate::{Connection, RESPType, SharedStore};
 use std::fmt;
 
@@ -21,6 +24,7 @@ pub enum Command {
     Echo(Echo),
     Set(Set),
     Get(Get),
+    Exists(Exists),
 }
 
 #[derive(Debug)]
@@ -76,6 +80,7 @@ impl Command {
             "echo" => Command::Echo(Echo::parse(cmd_strings)?),
             "set" => Command::Set(Set::parse(cmd_strings)?),
             "get" => Command::Get(Get::parse(cmd_strings)?),
+            "exists" => Command::Exists(Exists::parse(cmd_strings)?),
             _ => {
                 return Err(ParseError::UnrecognizedCmd(format!(
                     "unknown command '{}'",
@@ -112,6 +117,7 @@ impl Command {
             Command::Echo(cmd) => cmd.execute(cnxn).await,
             Command::Set(cmd) => cmd.execute(shared_store, cnxn).await,
             Command::Get(cmd) => cmd.execute(shared_store, cnxn).await,
+            Command::Exists(cmd) => cmd.execute(shared_store, cnxn).await,
         }
     }
 }
