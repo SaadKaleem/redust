@@ -16,3 +16,5 @@ pub mod server;
 
 pub const DEFAULT_HOST: &str = "127.0.0.1";
 pub const DEFAULT_PORT: u16 = 6666;
+pub const KEY_EXPIRY_DELAY_MS: u64 = 100;
+pub const KEY_EXPIRY_NUM_KEYS_TO_CHECK: usize = 20;

@@ -1,4 +1,4 @@
-use chrono::Duration;
+use chrono::{Duration, Utc};
 
 use crate::cmd::ParseError;
 use crate::protocol_handler::BulkStringData;
@@ -49,7 +49,9 @@ impl Set {
     /// Parsing the necessary arguments for the `Set` command
     ///
     /// Syntax:
-    /// SET key value [NX | XX] [GET]
+    /// SET key value [NX | XX] [GET] [EX seconds | PX milliseconds |
+    ///    EXAT unix-time-seconds | PXAT unix-time-milliseconds]
+    ///
     pub fn parse(cmd_strings: Vec<String>) -> Result<Set, ParseError> {
         if cmd_strings.len() < 3 {
             return Err(ParseError::SyntaxError(
@@ -58,17 +60,22 @@ impl Set {
         } else {
             let key: String = cmd_strings[1].clone();
             let value: DataType = DataType::String(cmd_strings[2].clone());
+            let mut duration: Option<Duration> = None;
 
             let mut nx_flag: bool = false;
             let mut xx_flag: bool = false;
             let mut get_flag: bool = false;
 
-            for cmd in cmd_strings.iter().skip(3) {
-                match cmd.as_str() {
-                    "NX" | "XX" => match Self::parse_nx_or_xx(cmd, &mut nx_flag, &mut xx_flag) {
-                        Ok(_) => {}
-                        Err(err) => return Err(err),
-                    },
+            let mut iterator = cmd_strings.iter().skip(3);
+
+            while let Some(cmd_arg) = iterator.next() {
+                match cmd_arg.as_str() {
+                    "NX" | "XX" => {
+                        match Self::parse_nx_or_xx(cmd_arg, &mut nx_flag, &mut xx_flag) {
+                            Ok(_) => {}
+                            Err(err) => return Err(err),
+                        }
+                    }
                     "GET" => {
                         if get_flag == true {
                             return Err(ParseError::SyntaxError("syntax error".to_string()));
@@ -77,13 +84,24 @@ impl Set {
                         }
                     }
                     "EX" | "PX" | "EXAT" | "PXAT" => {
-                        todo!()
+                        // Get the next iterator value, and also check if it parses properly.
+                        match iterator.next() {
+                            None => {
+                                return Err(ParseError::SyntaxError("syntax error".to_string()))
+                            }
+                            Some(next_arg) => {
+                                match Self::parse_duration_args(cmd_arg, next_arg, &mut duration) {
+                                    Ok(_) => {}
+                                    Err(err) => return Err(err),
+                                }
+                            }
+                        }
                     }
                     _ => {}
                 }
             }
 
-            Ok(Set::new(key, value, None, nx_flag, xx_flag, get_flag))
+            Ok(Set::new(key, value, duration, nx_flag, xx_flag, get_flag))
         }
     }
 
@@ -144,6 +162,49 @@ impl Set {
                 *xx_flag = true;
             }
             return Ok(());
+        }
+    }
+
+    /// Helper method to parse the duration arguments
+    ///
+    /// `cmd_arg` would be the EX | PX | EXAT | PXAT in our case.
+    /// `next_arg` must be a parsable integer.
+    fn parse_duration_args(
+        cmd_arg: &String,
+        next_arg: &String,
+        duration: &mut Option<Duration>,
+    ) -> Result<(), ParseError> {
+        match duration {
+            // If duration is already set, we obviously need to throw a syntax error.
+            Some(_) => Err(ParseError::SyntaxError(format!("{} syntax error", cmd_arg))),
+            None => {
+                // Parse the next argument, to see if it fulfils an i64.
+                let time_value = next_arg.parse::<i64>();
+
+                match time_value {
+                    Err(_) => {
+                        return Err(ParseError::SyntaxError(format!("{} syntax error", cmd_arg)));
+                    }
+                    Ok(time_value) => {
+                        match cmd_arg.as_str() {
+                            "EX" => *duration = Some(Duration::seconds(time_value)),
+                            "PX" => *duration = Some(Duration::milliseconds(time_value)),
+                            "EXAT" => {
+                                // Get the diff from now, and set the duration
+                                let diff_seconds = time_value - Utc::now().timestamp();
+                                *duration = Some(Duration::seconds(diff_seconds))
+                            }
+                            "PXAT" => {
+                                // Convert to seconds, and then assign the duration
+                                let diff_seconds = (time_value / 1000) - Utc::now().timestamp();
+                                *duration = Some(Duration::seconds(diff_seconds))
+                            }
+                            _ => {}
+                        }
+                        return Ok(());
+                    }
+                }
+            }
         }
     }
 }

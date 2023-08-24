@@ -1,10 +1,12 @@
-use crate::cmd::ParseError;
+use crate::{cmd::ParseError, KEY_EXPIRY_DELAY_MS, KEY_EXPIRY_NUM_KEYS_TO_CHECK};
 use chrono::{DateTime, Duration, Utc};
 use mockall::automock;
+use rand::seq::index::sample;
 use std::{
     collections::{HashMap, LinkedList},
     sync::{Arc, Mutex},
 };
+use tokio::time::sleep;
 
 #[automock]
 pub trait SharedStoreBase: Send + Sync {
@@ -56,6 +58,7 @@ pub struct DataStore {
 
     /// Not all keys are part of this HashMap, depending on whether
     /// they have a Key Expiry or not.
+    /// TimeSpan holds the value when this key will expire.
     date_time: HashMap<String, TimeSpan>,
 }
 
@@ -79,6 +82,9 @@ impl SharedStore {
                 date_time: HashMap::new(),
             }),
         });
+
+        tokio::spawn(run_key_expiry(shared.clone()));
+
         SharedStore { shared }
     }
 }
@@ -153,18 +159,103 @@ impl SharedStoreBase for SharedStore {
     /// Will return `None` if no value is found for the corresponding key.
     fn get(&self, key: String) -> Option<DataType> {
         // Acquire the Mutex
-        let mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
-
-        // TODO: If the value is expired, we return `None`
+        let mut mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
 
         // If the value exists, and is not expired we return `DataType`
         match mutex.data.get(&key) {
+            // If we have a `value` at `key`
             Some(value) => {
-                return Some(value.clone());
+                // Check if the key exists in the `date_time` HashMap,
+                // and remove from both HashMaps, if `current_time` > `expires_at`
+                match mutex.date_time.get(&key) {
+                    Some(val) => {
+                        if Utc::now() >= val.expires_at {
+                            mutex.date_time.remove(&key);
+                            mutex.data.remove(&key);
+                            return None;
+                        } else {
+                            return Some(value.clone());
+                        }
+                    }
+                    None => return Some(value.clone()),
+                }
             }
             None => {
                 return None;
             }
         }
+    }
+}
+
+impl GuardedDataStore {
+    /// Expiry Algorithm:
+    /// 1. Every 100 ms, test 20 keys at random from the set of keys, which have an expiry time set.
+    /// 2. Delete all the expired keys from both HashMaps.
+    /// 3. If more than 25% of the set of 20 keys was expired (5 keys were expired), restart the process from step 1.
+    ///
+    fn purge_expired_keys(&self) {
+        let mut restart: bool = true;
+        // Acquire the Mutex
+        let mut mutex: std::sync::MutexGuard<'_, DataStore> = self.store.lock().unwrap();
+
+        while restart == true {
+            let random_keys: Vec<String>;
+            {
+                let mut rng = rand::thread_rng();
+                // Get the iterator of the keys, of which have an expiry.
+                // Borrow the hashmap
+                let keys = mutex.date_time.keys();
+
+                // Get the random indices to collect, for checking purposes.
+                let num_keys = mutex.date_time.len();
+
+                if num_keys == 0 {
+                    return;
+                }
+
+                let num_to_get = std::cmp::min(num_keys, KEY_EXPIRY_NUM_KEYS_TO_CHECK);
+
+                let indices = sample(&mut rng, num_keys, num_to_get);
+                // Cloning the individual key is necessary, otherwise we'll still have borrowed the
+                // reference, and wouldn't be able to perform a mutable operation on the HashMap
+                // via mutex.data.remove(...)
+                random_keys = indices
+                    .iter()
+                    .map(|i| keys.clone().nth(i).unwrap().clone())
+                    .collect();
+            }
+
+            // For each of the random keys, check if its expiry has met, if so remove it from both HashMaps.
+            let mut keys_removed: i32 = 0;
+            let keys_picked_length: usize = random_keys.len();
+
+            for key in random_keys {
+                let value = mutex.date_time.get(&key).unwrap();
+                if Utc::now() >= value.expires_at {
+                    mutex.data.remove(&key);
+                    mutex.date_time.remove(&key);
+                    keys_removed += 1;
+                }
+            }
+
+            // If less than 25% of keys, have been removed we do not restart
+            if (keys_removed as f32 / keys_picked_length as f32) < 0.25 {
+                restart = false;
+            }
+        }
+        drop(mutex);
+    }
+}
+
+/// Async function, which calls the `purge_expired_keys` function every X duration
+///
+/// The reason to split this is that async context and synchronized mutexes cannot be shared.
+async fn run_key_expiry(shared: Arc<GuardedDataStore>) {
+    loop {
+        // Purge the expired keys
+        shared.purge_expired_keys();
+
+        // Sleep for 100 ms
+        let _ = sleep(std::time::Duration::from_millis(KEY_EXPIRY_DELAY_MS)).await;
     }
 }
