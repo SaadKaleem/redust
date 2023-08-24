@@ -204,7 +204,7 @@ impl GuardedDataStore {
                 let mut rng = rand::thread_rng();
                 // Get the iterator of the keys, of which have an expiry.
                 // Borrow the hashmap
-                let mut keys = mutex.date_time.keys();
+                let keys = mutex.date_time.keys();
 
                 // Get the random indices to collect, for checking purposes.
                 let num_keys = mutex.date_time.len();
@@ -216,13 +216,12 @@ impl GuardedDataStore {
                 let num_to_get = std::cmp::min(num_keys, KEY_EXPIRY_NUM_KEYS_TO_CHECK);
 
                 let indices = sample(&mut rng, num_keys, num_to_get);
-
                 // Cloning the individual key is necessary, otherwise we'll still have borrowed the
                 // reference, and wouldn't be able to perform a mutable operation on the HashMap
                 // via mutex.data.remove(...)
                 random_keys = indices
                     .iter()
-                    .map(|i| keys.nth(i).unwrap().clone())
+                    .map(|i| keys.clone().nth(i).unwrap().clone())
                     .collect();
             }
 
