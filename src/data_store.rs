@@ -56,6 +56,7 @@ pub struct DataStore {
 
     /// Not all keys are part of this HashMap, depending on whether
     /// they have a Key Expiry or not.
+    /// TimeSpan holds the value when this key will expire.
     date_time: HashMap<String, TimeSpan>,
 }
 
@@ -153,14 +154,26 @@ impl SharedStoreBase for SharedStore {
     /// Will return `None` if no value is found for the corresponding key.
     fn get(&self, key: String) -> Option<DataType> {
         // Acquire the Mutex
-        let mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
-
-        // TODO: If the value is expired, we return `None`
+        let mut mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
 
         // If the value exists, and is not expired we return `DataType`
         match mutex.data.get(&key) {
+            // If we have a `value` at `key`
             Some(value) => {
-                return Some(value.clone());
+                // Check if the key exists in the `date_time` HashMap,
+                // and remove from both HashMaps, if `current_time` > `expires_at`
+                match mutex.date_time.get(&key) {
+                    Some(val) => {
+                        if Utc::now() >= val.expires_at {
+                            mutex.date_time.remove(&key);
+                            mutex.data.remove(&key);
+                            return None;
+                        } else {
+                            return Some(value.clone());
+                        }
+                    }
+                    None => return Some(value.clone()),
+                }
             }
             None => {
                 return None;
