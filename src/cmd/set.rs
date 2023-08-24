@@ -191,12 +191,12 @@ impl Set {
                             "PX" => *duration = Some(Duration::milliseconds(time_value)),
                             "EXAT" => {
                                 // Get the diff from now, and set the duration
-                                let diff_seconds = Utc::now().timestamp() - time_value;
+                                let diff_seconds = time_value - Utc::now().timestamp();
                                 *duration = Some(Duration::seconds(diff_seconds))
                             }
                             "PXAT" => {
                                 // Convert to seconds, and then assign the duration
-                                let diff_seconds = Utc::now().timestamp() - (time_value / 1000);
+                                let diff_seconds = (time_value / 1000) - Utc::now().timestamp();
                                 *duration = Some(Duration::seconds(diff_seconds))
                             }
                             _ => {}
