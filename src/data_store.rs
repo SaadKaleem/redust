@@ -20,6 +20,8 @@ pub trait SharedStoreBase: Send + Sync {
     fn get(&self, key: String) -> Option<DataType>;
 
     fn exists(&self, keys: Vec<String>) -> u64;
+
+    fn del(&self, keys: Vec<String>) -> u64;
 }
 
 /// Shared Data Store across all the connections
@@ -179,6 +181,26 @@ impl SharedStoreBase for SharedStore {
         for k in keys {
             if mutex.data.contains_key(&k) == true {
                 count += 1;
+            }
+        }
+
+        count
+    }
+
+    fn del(&self, keys: Vec<String>) -> u64 {
+        // Acquire the Mutex
+        let mut mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
+
+        let mut count: u64 = 0;
+
+        for k in keys {
+            match mutex.data.remove(&k) {
+                Some(_) => {
+                    // Also try to remove from `date_time` map
+                    mutex.date_time.remove(&k);
+                    count += 1;
+                }
+                None => {}
             }
         }
 
