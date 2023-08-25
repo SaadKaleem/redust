@@ -126,7 +126,7 @@ impl SharedStore {
                     ));
                 }
             },
-            // Key:Val didn't exist, so set it as 0+1=1
+            // Key:Val didn't exist
             None => {
                 let value: i64 = amount;
                 mutex
