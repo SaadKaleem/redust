@@ -22,6 +22,8 @@ pub trait SharedStoreBase: Send + Sync {
     fn exists(&self, keys: Vec<String>) -> u64;
 
     fn del(&self, keys: Vec<String>) -> u64;
+
+    fn incr(&self, key: String) -> Result<i64, ParseError>;
 }
 
 /// Shared Data Store across all the connections
@@ -84,6 +86,53 @@ impl SharedStore {
             }),
         });
         SharedStore { shared }
+    }
+
+    /// Adjust the `key` by the `amount`, this can be used to increment or decrement 
+    /// the `value` at `key`
+    pub fn _adjust_by(
+        &self,
+        mutex: &mut std::sync::MutexGuard<'_, DataStore>,
+        key: &String,
+        amount: i64,
+    ) -> Result<i64, ParseError> {
+        match mutex.data.get(key) {
+            Some(value) => match value {
+                DataType::String(val) => {
+                    let mut parsed_number = val.parse::<i64>();
+
+                    match parsed_number {
+                        Ok(ref mut num) => {
+                            *num += amount;
+
+                            mutex
+                                .data
+                                .insert(key.clone(), DataType::String(num.to_string()));
+
+                            return Ok(*num);
+                        }
+                        Err(_) => {
+                            return Err(ParseError::ConditionNotMet(
+                                "ERR value type is not integer or out of range".to_string(),
+                            ))
+                        }
+                    }
+                }
+                _ => {
+                    return Err(ParseError::ConditionNotMet(
+                        "ERR value type is not string".to_string(),
+                    ));
+                }
+            },
+            // Key:Val didn't exist, so set it as 0+1=1
+            None => {
+                let value: i64 = amount;
+                mutex
+                    .data
+                    .insert(key.clone(), DataType::String(value.to_string()));
+                return Ok(value);
+            }
+        }
     }
 }
 
@@ -205,5 +254,12 @@ impl SharedStoreBase for SharedStore {
         }
 
         count
+    }
+
+    fn incr(&self, key: String) -> Result<i64, ParseError> {
+        // Acquire the Mutex
+        let mut mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
+
+        return self._adjust_by(&mut mutex, &key, 1);
     }
 }
