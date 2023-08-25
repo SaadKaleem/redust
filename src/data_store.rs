@@ -24,6 +24,8 @@ pub trait SharedStoreBase: Send + Sync {
     fn del(&self, keys: Vec<String>) -> u64;
 
     fn incr(&self, key: String) -> Result<i64, ParseError>;
+
+    fn decr(&self, key: String) -> Result<i64, ParseError>;
 }
 
 /// Shared Data Store across all the connections
@@ -88,7 +90,7 @@ impl SharedStore {
         SharedStore { shared }
     }
 
-    /// Adjust the `key` by the `amount`, this can be used to increment or decrement 
+    /// Adjust the `key` by the `amount`, this can be used to increment or decrement
     /// the `value` at `key`
     pub fn _adjust_by(
         &self,
@@ -261,5 +263,12 @@ impl SharedStoreBase for SharedStore {
         let mut mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
 
         return self._adjust_by(&mut mutex, &key, 1);
+    }
+
+    fn decr(&self, key: String) -> Result<i64, ParseError> {
+        // Acquire the Mutex
+        let mut mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
+
+        return self._adjust_by(&mut mutex, &key, -1);
     }
 }

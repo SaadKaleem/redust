@@ -19,6 +19,9 @@ pub use del::Del;
 mod incr;
 pub use incr::Incr;
 
+mod decr;
+pub use decr::Decr;
+
 use crate::{Connection, RESPType, SharedStore};
 use std::fmt;
 
@@ -33,6 +36,7 @@ pub enum Command {
     Exists(Exists),
     Del(Del),
     Incr(Incr),
+    Decr(Decr),
 }
 
 #[derive(Debug)]
@@ -91,6 +95,7 @@ impl Command {
             "exists" => Command::Exists(Exists::parse(cmd_strings)?),
             "del" => Command::Del(Del::parse(cmd_strings)?),
             "incr" => Command::Incr(Incr::parse(cmd_strings)?),
+            "decr" => Command::Decr(Decr::parse(cmd_strings)?),
             _ => {
                 return Err(ParseError::UnrecognizedCmd(format!(
                     "unknown command '{}'",
@@ -130,6 +135,7 @@ impl Command {
             Command::Exists(cmd) => cmd.execute(shared_store, cnxn).await,
             Command::Del(cmd) => cmd.execute(shared_store, cnxn).await,
             Command::Incr(cmd) => cmd.execute(shared_store, cnxn).await,
+            Command::Decr(cmd) => cmd.execute(shared_store, cnxn).await,
         }
     }
 }
