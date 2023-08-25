@@ -223,6 +223,9 @@ impl SharedStoreBase for SharedStore {
         }
     }
 
+    /// Check if the provided `keys` are part of the HashMap
+    ///
+    /// Will return a `u64` integer count of the number of keys, that exist.
     fn exists(&self, keys: Vec<String>) -> u64 {
         // Acquire the Mutex
         let mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
@@ -238,6 +241,9 @@ impl SharedStoreBase for SharedStore {
         count
     }
 
+    /// Delete the provided `keys`
+    ///
+    /// Will return a `u64` integer count of the number of keys, that were successfully deleted
     fn del(&self, keys: Vec<String>) -> u64 {
         // Acquire the Mutex
         let mut mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
@@ -258,6 +264,10 @@ impl SharedStoreBase for SharedStore {
         count
     }
 
+    /// Increment the provided `key`, given it's parsable to a signed integer (i64) type.
+    /// If the key didn't exist, the value is started from zero, and incremented.
+    /// 
+    /// Will return the new incremented i64 integer value.
     fn incr(&self, key: String) -> Result<i64, ParseError> {
         // Acquire the Mutex
         let mut mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
@@ -265,6 +275,10 @@ impl SharedStoreBase for SharedStore {
         return self._adjust_by(&mut mutex, &key, 1);
     }
 
+    /// Decrement the provided `key`, given it's parsable to an signed integer (i64) type.
+    /// If the key didn't exist, the value is started from zero, and decremented.
+    /// 
+    /// Will return the new decremented i64 integer value.
     fn decr(&self, key: String) -> Result<i64, ParseError> {
         // Acquire the Mutex
         let mut mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
