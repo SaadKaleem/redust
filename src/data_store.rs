@@ -2,6 +2,7 @@ use crate::cmd::ParseError;
 use chrono::{DateTime, Duration, Utc};
 use mockall::automock;
 use std::{
+    cell::RefCell,
     collections::{HashMap, LinkedList},
     sync::{Arc, Mutex},
 };
@@ -26,6 +27,8 @@ pub trait SharedStoreBase: Send + Sync {
     fn incr(&self, key: String) -> Result<i64, ParseError>;
 
     fn decr(&self, key: String) -> Result<i64, ParseError>;
+
+    fn lpush(&self, key: String, elements: Vec<String>) -> Result<i64, ParseError>;
 }
 
 /// Shared Data Store across all the connections
@@ -71,7 +74,7 @@ pub struct DataStore {
 #[derive(Debug, Clone, PartialEq)]
 pub enum DataType {
     String(String),
-    LinkedList(LinkedList<String>),
+    LinkedList(RefCell<LinkedList<String>>),
 }
 
 #[derive(Debug)]
@@ -90,8 +93,9 @@ impl SharedStore {
         SharedStore { shared }
     }
 
-    /// Adjust the `key` by the `amount`, this can be used to increment or decrement
-    /// the `value` at `key`
+    /// Adjust (increment or decrement) the value at `key`
+    /// by the provided `amount`
+    ///
     pub fn _adjust_by(
         &self,
         mutex: &mut std::sync::MutexGuard<'_, DataStore>,
@@ -266,7 +270,7 @@ impl SharedStoreBase for SharedStore {
 
     /// Increment the provided `key`, given it's parsable to a signed integer (i64) type.
     /// If the key didn't exist, the value is started from zero, and incremented.
-    /// 
+    ///
     /// Will return the new incremented i64 integer value.
     fn incr(&self, key: String) -> Result<i64, ParseError> {
         // Acquire the Mutex
@@ -277,12 +281,45 @@ impl SharedStoreBase for SharedStore {
 
     /// Decrement the provided `key`, given it's parsable to an signed integer (i64) type.
     /// If the key didn't exist, the value is started from zero, and decremented.
-    /// 
+    ///
     /// Will return the new decremented i64 integer value.
     fn decr(&self, key: String) -> Result<i64, ParseError> {
         // Acquire the Mutex
         let mut mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
 
         return self._adjust_by(&mut mutex, &key, -1);
+    }
+
+    fn lpush(&self, key: String, elements: Vec<String>) -> Result<i64, ParseError> {
+        // Acquire the Mutex
+        let mut mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
+
+        match mutex.data.get(&key) {
+            Some(value) => match value {
+                DataType::LinkedList(ref_list) => {
+                    let mut list = ref_list.borrow_mut();
+
+                    for elem in elements {
+                        list.push_front(elem);
+                    }
+
+                    return Ok(list.len() as i64);
+                }
+                _ => {
+                    return Err(ParseError::ConditionNotMet(
+                        "ERR value type is not list".to_string(),
+                    ));
+                }
+            },
+            None => {
+                // Convert Vec to LinkedList by exhuasting the iterator
+                let list: LinkedList<String> = elements.into_iter().collect();
+                let length: i64 = list.len() as i64;
+
+                mutex.data.insert(key, DataType::LinkedList(list.into()));
+
+                return Ok(length);
+            }
+        }
     }
 }
