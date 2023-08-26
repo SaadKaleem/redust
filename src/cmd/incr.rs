@@ -4,7 +4,7 @@ use crate::{ConnectionBase, RESPType, SharedStoreBase};
 /// The INCR operation in Redis
 #[derive(Debug)]
 pub struct Incr {
-    // The keys to check if they exist
+    // The key to increment
     key: String,
 }
 

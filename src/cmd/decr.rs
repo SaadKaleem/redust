@@ -4,7 +4,7 @@ use crate::{ConnectionBase, RESPType, SharedStoreBase};
 /// The DECR operation in Redis
 #[derive(Debug)]
 pub struct Decr {
-    // The keys to check if they exist
+    // The key to decrement
     key: String,
 }
 
