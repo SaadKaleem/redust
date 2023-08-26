@@ -43,7 +43,7 @@ impl Lpush {
         shared_store: &dyn SharedStoreBase,
         cnxn: &mut dyn ConnectionBase,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        // Set the key:value in the shared store
+        // Push the elements in the shared store
         let result = shared_store.lpush(self.key, self.elements);
 
         let response = match result {
