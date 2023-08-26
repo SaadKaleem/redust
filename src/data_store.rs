@@ -74,6 +74,8 @@ pub struct DataStore {
 #[derive(Debug, Clone, PartialEq)]
 pub enum DataType {
     String(String),
+
+    // Needs to be behind a RefCell, to mutate in-place.
     LinkedList(RefCell<LinkedList<String>>),
 }
 
