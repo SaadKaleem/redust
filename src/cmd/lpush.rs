@@ -36,8 +36,8 @@ impl Lpush {
 
     /// Execute the `Lpush` command
     ///
-    /// Returns an integer reply, for the number of keys
-    /// that exist from the specified arguments
+    /// Returns an integer reply, representing
+    /// the length of the list
     pub async fn execute(
         self,
         shared_store: &dyn SharedStoreBase,

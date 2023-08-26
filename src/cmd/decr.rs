@@ -37,7 +37,7 @@ impl Decr {
         shared_store: &dyn SharedStoreBase,
         cnxn: &mut dyn ConnectionBase,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        // Set the key:value in the shared store
+        // Decr the key:value in the shared store
         let result = shared_store.decr(self.key);
 
         let response = match result {
