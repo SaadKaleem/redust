@@ -24,7 +24,7 @@ impl Lrange {
     /// Parsing the necessary arguments for the `LRANGE` command
     ///
     /// Syntax:
-    /// LRANGE key
+    /// LRANGE key start stop
     pub fn parse(cmd_strings: Vec<String>) -> Result<Lrange, ParseError> {
         if cmd_strings.len() != 4 {
             return Err(ParseError::SyntaxError(

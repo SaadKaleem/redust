@@ -20,7 +20,7 @@ impl Lpush {
     /// Parsing the necessary arguments for the `LPUSH` command
     ///
     /// Syntax:
-    /// LPUSH key
+    /// LPUSH key element [element ...]
     pub fn parse(cmd_strings: Vec<String>) -> Result<Lpush, ParseError> {
         if cmd_strings.len() < 3 {
             return Err(ParseError::SyntaxError(

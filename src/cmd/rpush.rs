@@ -20,7 +20,7 @@ impl Rpush {
     /// Parsing the necessary arguments for the `RPUSH` command
     ///
     /// Syntax:
-    /// RPUSH key
+    /// RPUSH key element [element ...]
     pub fn parse(cmd_strings: Vec<String>) -> Result<Rpush, ParseError> {
         if cmd_strings.len() < 3 {
             return Err(ParseError::SyntaxError(
