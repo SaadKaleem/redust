@@ -31,6 +31,8 @@ pub trait SharedStoreBase: Send + Sync {
     fn lpush(&self, key: String, elements: Vec<String>) -> Result<i64, ParseError>;
 
     fn lrange(&self, key: String, start: i64, stop: i64) -> Result<Vec<String>, ParseError>;
+
+    fn rpush(&self, key: String, elements: Vec<String>) -> Result<i64, ParseError>;
 }
 
 /// Shared Data Store across all the connections
@@ -343,7 +345,9 @@ impl SharedStoreBase for SharedStore {
         return self._adjust_by(&mut mutex, key, -1);
     }
 
-    /// Push elements to the defined key, creates a new LinkedList if it doesn't exist previously
+    /// Push elements to the defined key from the front.
+    ///
+    /// Creates a new LinkedList if it doesn't exist previously
     ///
     /// Will return the number of elements, which are part of the list.
     fn lpush(&self, key: String, elements: Vec<String>) -> Result<i64, ParseError> {
@@ -353,9 +357,8 @@ impl SharedStoreBase for SharedStore {
         return self.push_front_or_back(&mut mutex, key, elements, "front".to_string());
     }
 
-    
-    /// Query the `key` from `start` to `stop` index,
-    /// 
+    /// Query the `key` from `start` to `stop` index.
+    ///
     /// Negative indices are normalized, by taking into account the length of the LinkedList.
     ///
     /// Will return the elements, which are part of the list, in the defined range.
@@ -399,9 +402,19 @@ impl SharedStoreBase for SharedStore {
                 }
             }
 
-            println!("{:?}", result);
-
             Ok(result)
         }
+    }
+
+    /// Push elements to the defined key from the back.
+    ///
+    /// Creates a new LinkedList if it doesn't exist previously
+    ///
+    /// Will return the number of elements, which are part of the list.
+    fn rpush(&self, key: String, elements: Vec<String>) -> Result<i64, ParseError> {
+        // Acquire the Mutex
+        let mut mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
+
+        return self.push_front_or_back(&mut mutex, key, elements, "back".to_string());
     }
 }

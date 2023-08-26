@@ -28,6 +28,9 @@ pub use lpush::Lpush;
 mod lrange;
 pub use lrange::Lrange;
 
+mod rpush;
+pub use rpush::Rpush;
+
 use crate::{Connection, RESPType, SharedStore};
 use std::fmt;
 
@@ -45,6 +48,7 @@ pub enum Command {
     Decr(Decr),
     Lpush(Lpush),
     Lrange(Lrange),
+    Rpush(Rpush),
 }
 
 #[derive(Debug)]
@@ -106,6 +110,7 @@ impl Command {
             "decr" => Command::Decr(Decr::parse(cmd_strings)?),
             "lpush" => Command::Lpush(Lpush::parse(cmd_strings)?),
             "lrange" => Command::Lrange(Lrange::parse(cmd_strings)?),
+            "rpush" => Command::Rpush(Rpush::parse(cmd_strings)?),
             _ => {
                 return Err(ParseError::UnrecognizedCmd(format!(
                     "unknown command '{}'",
@@ -148,6 +153,7 @@ impl Command {
             Command::Decr(cmd) => cmd.execute(shared_store, cnxn).await,
             Command::Lpush(cmd) => cmd.execute(shared_store, cnxn).await,
             Command::Lrange(cmd) => cmd.execute(shared_store, cnxn).await,
+            Command::Rpush(cmd) => cmd.execute(shared_store, cnxn).await,
         }
     }
 }
