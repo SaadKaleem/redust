@@ -29,6 +29,8 @@ pub trait SharedStoreBase: Send + Sync {
     fn decr(&self, key: String) -> Result<i64, ParseError>;
 
     fn lpush(&self, key: String, elements: Vec<String>) -> Result<i64, ParseError>;
+
+    fn lrange(&self, key: String, start: i64, stop: i64) -> Result<Vec<String>, ParseError>;
 }
 
 /// Shared Data Store across all the connections
@@ -141,9 +143,9 @@ impl SharedStore {
         }
     }
 
-    /// Push `elements` to a `key`, based on the 
+    /// Push `elements` to a `key`, based on the
     /// defined `action`
-    /// 
+    ///
     fn push_front_or_back(
         &self,
         mutex: &mut std::sync::MutexGuard<'_, DataStore>,
@@ -181,6 +183,14 @@ impl SharedStore {
 
                 return Ok(length);
             }
+        }
+    }
+
+    fn normalize_index(index: i64, len: i64) -> i64 {
+        if index < 0 {
+            len + index
+        } else {
+            index
         }
     }
 }
@@ -334,12 +344,64 @@ impl SharedStoreBase for SharedStore {
     }
 
     /// Push elements to the defined key, creates a new LinkedList if it doesn't exist previously
-    /// 
+    ///
     /// Will return the number of elements, which are part of the list.
     fn lpush(&self, key: String, elements: Vec<String>) -> Result<i64, ParseError> {
         // Acquire the Mutex
         let mut mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
 
         return self.push_front_or_back(&mut mutex, key, elements, "front".to_string());
+    }
+
+    
+    /// Query the `key` from `start` to `stop` index,
+    /// 
+    /// Negative indices are normalized, by taking into account the length of the LinkedList.
+    ///
+    /// Will return the elements, which are part of the list, in the defined range.
+    fn lrange(&self, key: String, start: i64, stop: i64) -> Result<Vec<String>, ParseError> {
+        // Acquire the Mutex
+        let mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
+
+        // Does key exist, and if so get it's value and ensure it's a LinkedList
+        let list = match mutex.data.get(&key) {
+            Some(value) => match value {
+                DataType::LinkedList(list) => list,
+                _ => {
+                    return Err(ParseError::ConditionNotMet(
+                        "WRONGTYPE Operation against a key holding the wrong kind of value"
+                            .to_string(),
+                    ))
+                }
+            },
+            None => {
+                return Ok(Vec::new());
+            }
+        };
+
+        let borrowed_list = list.borrow();
+        let length = borrowed_list.len() as i64;
+
+        let start = SharedStore::normalize_index(start, length);
+        let stop = SharedStore::normalize_index(stop, length);
+
+        if start < 0 || start > stop {
+            return Ok(Vec::new());
+        } else {
+            let mut result = Vec::new();
+            let mut iter = borrowed_list.iter().skip(start as usize);
+
+            for _ in start..=stop {
+                if let Some(elem) = iter.next() {
+                    result.push(elem.clone());
+                } else {
+                    break;
+                }
+            }
+
+            println!("{:?}", result);
+
+            Ok(result)
+        }
     }
 }
