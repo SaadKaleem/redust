@@ -10,6 +10,27 @@ pub use set::Set;
 mod get;
 pub use get::Get;
 
+mod exists;
+pub use exists::Exists;
+
+mod del;
+pub use del::Del;
+
+mod incr;
+pub use incr::Incr;
+
+mod decr;
+pub use decr::Decr;
+
+mod lpush;
+pub use lpush::Lpush;
+
+mod lrange;
+pub use lrange::Lrange;
+
+mod rpush;
+pub use rpush::Rpush;
+
 use crate::{Connection, RESPType, SharedStore};
 use std::fmt;
 
@@ -21,6 +42,13 @@ pub enum Command {
     Echo(Echo),
     Set(Set),
     Get(Get),
+    Exists(Exists),
+    Del(Del),
+    Incr(Incr),
+    Decr(Decr),
+    Lpush(Lpush),
+    Lrange(Lrange),
+    Rpush(Rpush),
 }
 
 #[derive(Debug)]
@@ -76,6 +104,13 @@ impl Command {
             "echo" => Command::Echo(Echo::parse(cmd_strings)?),
             "set" => Command::Set(Set::parse(cmd_strings)?),
             "get" => Command::Get(Get::parse(cmd_strings)?),
+            "exists" => Command::Exists(Exists::parse(cmd_strings)?),
+            "del" => Command::Del(Del::parse(cmd_strings)?),
+            "incr" => Command::Incr(Incr::parse(cmd_strings)?),
+            "decr" => Command::Decr(Decr::parse(cmd_strings)?),
+            "lpush" => Command::Lpush(Lpush::parse(cmd_strings)?),
+            "lrange" => Command::Lrange(Lrange::parse(cmd_strings)?),
+            "rpush" => Command::Rpush(Rpush::parse(cmd_strings)?),
             _ => {
                 return Err(ParseError::UnrecognizedCmd(format!(
                     "unknown command '{}'",
@@ -112,6 +147,13 @@ impl Command {
             Command::Echo(cmd) => cmd.execute(cnxn).await,
             Command::Set(cmd) => cmd.execute(shared_store, cnxn).await,
             Command::Get(cmd) => cmd.execute(shared_store, cnxn).await,
+            Command::Exists(cmd) => cmd.execute(shared_store, cnxn).await,
+            Command::Del(cmd) => cmd.execute(shared_store, cnxn).await,
+            Command::Incr(cmd) => cmd.execute(shared_store, cnxn).await,
+            Command::Decr(cmd) => cmd.execute(shared_store, cnxn).await,
+            Command::Lpush(cmd) => cmd.execute(shared_store, cnxn).await,
+            Command::Lrange(cmd) => cmd.execute(shared_store, cnxn).await,
+            Command::Rpush(cmd) => cmd.execute(shared_store, cnxn).await,
         }
     }
 }

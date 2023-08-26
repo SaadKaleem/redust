@@ -8,7 +8,7 @@ const MSG_SEPERATOR_SIZE: usize = MSG_SEPERATOR.len();
 pub enum RESPType {
     SimpleString(String),
     Error(String),
-    Integer(i32),
+    Integer(i64),
     BulkString(Option<BulkStringData>),
     Array(Vec<RESPType>),
 }
@@ -141,7 +141,7 @@ impl BaseSerializer for IntegerSerializer {
 
         if let Some(position) = separator {
             // The separator was found
-            let payload: Result<i32, _> = String::from_utf8_lossy(&buffer[1..position]).parse();
+            let payload: Result<i64, _> = String::from_utf8_lossy(&buffer[1..position]).parse();
 
             match payload {
                 Ok(integer) => {

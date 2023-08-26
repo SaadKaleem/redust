@@ -54,7 +54,7 @@ impl Get {
                         prefix_length,
                     }))
                 }
-                _ => RESPType::BulkString(None),
+                _ => RESPType::Error("ERR Wrong key type".to_string()),
             },
             // Return a nil bulk, if key isn't found
             None => RESPType::BulkString(None),
