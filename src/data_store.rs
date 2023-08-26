@@ -101,10 +101,10 @@ impl SharedStore {
     pub fn _adjust_by(
         &self,
         mutex: &mut std::sync::MutexGuard<'_, DataStore>,
-        key: &String,
+        key: String,
         amount: i64,
     ) -> Result<i64, ParseError> {
-        match mutex.data.get(key) {
+        match mutex.data.get(&key) {
             Some(value) => match value {
                 DataType::String(val) => {
                     let mut parsed_number = val.parse::<i64>();
@@ -113,9 +113,7 @@ impl SharedStore {
                         Ok(ref mut num) => {
                             *num += amount;
 
-                            mutex
-                                .data
-                                .insert(key.clone(), DataType::String(num.to_string()));
+                            mutex.data.insert(key, DataType::String(num.to_string()));
 
                             return Ok(*num);
                         }
@@ -139,6 +137,49 @@ impl SharedStore {
                     .data
                     .insert(key.clone(), DataType::String(value.to_string()));
                 return Ok(value);
+            }
+        }
+    }
+
+    /// Push `elements` to a `key`, based on the 
+    /// defined `action`
+    /// 
+    fn push_front_or_back(
+        &self,
+        mutex: &mut std::sync::MutexGuard<'_, DataStore>,
+        key: String,
+        elements: Vec<String>,
+        action: String,
+    ) -> Result<i64, ParseError> {
+        match mutex.data.get(&key) {
+            Some(value) => match value {
+                DataType::LinkedList(ref_list) => {
+                    let mut list = ref_list.borrow_mut();
+
+                    for elem in elements {
+                        if action == "front" {
+                            list.push_front(elem);
+                        } else if action == "back" {
+                            list.push_back(elem);
+                        }
+                    }
+
+                    return Ok(list.len() as i64);
+                }
+                _ => {
+                    return Err(ParseError::ConditionNotMet(
+                        "ERR value type is not list".to_string(),
+                    ));
+                }
+            },
+            None => {
+                // Convert Vec to LinkedList by exhausting the iterator
+                let list: LinkedList<String> = elements.into_iter().collect();
+                let length: i64 = list.len() as i64;
+
+                mutex.data.insert(key, DataType::LinkedList(list.into()));
+
+                return Ok(length);
             }
         }
     }
@@ -278,7 +319,7 @@ impl SharedStoreBase for SharedStore {
         // Acquire the Mutex
         let mut mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
 
-        return self._adjust_by(&mut mutex, &key, 1);
+        return self._adjust_by(&mut mutex, key, 1);
     }
 
     /// Decrement the provided `key`, given it's parsable to an signed integer (i64) type.
@@ -289,39 +330,16 @@ impl SharedStoreBase for SharedStore {
         // Acquire the Mutex
         let mut mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
 
-        return self._adjust_by(&mut mutex, &key, -1);
+        return self._adjust_by(&mut mutex, key, -1);
     }
 
+    /// Push elements to the defined key, creates a new LinkedList if it doesn't exist previously
+    /// 
+    /// Will return the number of elements, which are part of the list.
     fn lpush(&self, key: String, elements: Vec<String>) -> Result<i64, ParseError> {
         // Acquire the Mutex
         let mut mutex: std::sync::MutexGuard<'_, DataStore> = self.shared.store.lock().unwrap();
 
-        match mutex.data.get(&key) {
-            Some(value) => match value {
-                DataType::LinkedList(ref_list) => {
-                    let mut list = ref_list.borrow_mut();
-
-                    for elem in elements {
-                        list.push_front(elem);
-                    }
-
-                    return Ok(list.len() as i64);
-                }
-                _ => {
-                    return Err(ParseError::ConditionNotMet(
-                        "ERR value type is not list".to_string(),
-                    ));
-                }
-            },
-            None => {
-                // Convert Vec to LinkedList by exhuasting the iterator
-                let list: LinkedList<String> = elements.into_iter().collect();
-                let length: i64 = list.len() as i64;
-
-                mutex.data.insert(key, DataType::LinkedList(list.into()));
-
-                return Ok(length);
-            }
-        }
+        return self.push_front_or_back(&mut mutex, key, elements, "front".to_string());
     }
 }
