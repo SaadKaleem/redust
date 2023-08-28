@@ -92,7 +92,7 @@ pub struct TimeSpan {
 }
 
 impl SharedStore {
-    pub fn new() -> SharedStore {
+    pub fn new(spawn_key_expiry_bg: bool) -> SharedStore {
         let shared = Arc::new(GuardedDataStore {
             store: Mutex::new(DataStore {
                 data: HashMap::new(),
@@ -100,7 +100,9 @@ impl SharedStore {
             }),
         });
 
-        tokio::spawn(run_key_expiry(shared.clone()));
+        if spawn_key_expiry_bg == true {
+            tokio::spawn(run_key_expiry(shared.clone()));
+        }
 
         SharedStore { shared }
     }
@@ -223,9 +225,7 @@ impl SharedStoreBase for SharedStore {
         // To check for xx and nx flags
         //
         // The corresponding `ParseError` is returned
-        if nx == true && xx == true {
-            return Err(ParseError::SyntaxError("syntax error".to_string()));
-        } else if nx == true && xx == false {
+        if nx == true && xx == false {
             // Ensure that the key does not exist first
             if mutex.data.contains_key(&key) {
                 return Err(ParseError::ConditionNotMet(
@@ -505,7 +505,7 @@ async fn run_key_expiry(shared: Arc<GuardedDataStore>) {
         // Purge the expired keys
         shared.purge_expired_keys();
 
-        // Sleep for 100 ms
+        // Sleep for `KEY_EXPIRY_DELAY_MS` ms
         let _ = sleep(std::time::Duration::from_millis(KEY_EXPIRY_DELAY_MS)).await;
     }
 }

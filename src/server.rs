@@ -94,7 +94,7 @@ pub async fn run(listener: TcpListener) -> Result<(), Box<dyn std::error::Error>
     // Initialize the listener state
     let mut server = Listener {
         listener,
-        shared_store: SharedStore::new(),
+        shared_store: SharedStore::new(true),
     };
 
     server.run().await?;
